@@ -31,3 +31,5 @@ for band in bands:
     plt.plot(freqs,meanB,'g')
     plt.fill_between(freqs,meanA+stdA,meanA-stdA,alpha=.5,color='r')
     plt.fill_between(freqs,meanB+stdB,meanB-stdB,alpha=.5,color='g')
+    
+git_push()

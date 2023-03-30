@@ -24,6 +24,23 @@ from tensorflow.keras.layers import Input, Dense, Activation, BatchNormalization
 from tensorflow.keras.layers import AveragePooling2D, MaxPooling2D, Dropout, GlobalAveragePooling2D
 from tensorflow.keras import Model
 from sklearn import metrics as Metrics
+from git import Repo
+
+PATH_OF_GIT_REPO = r'/export02/data/Santiago/Stability_project_Code/.git'  # make sure .git folder is properly configured
+COMMIT_MESSAGE = 'comment from python script'
+
+def git_push():
+    try:
+        repo = Repo(PATH_OF_GIT_REPO)
+        # repo.git.add(update=True)
+        repo.git.add(all=True)
+        repo.index.commit(COMMIT_MESSAGE)
+        origin = repo.remote(name='origin')
+        origin.push()
+    except:
+        print('Some error occured while pushing the code')    
+
+git_push()
 
 class Stability_project:
    
@@ -102,3 +119,5 @@ def ANN (DataFrame):
         batch_size=256,
         validation_split=0.1,
         verbose=1)
+    
+    

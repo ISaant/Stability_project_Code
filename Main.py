@@ -10,6 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from Fun import *
 
+
+git_pull()
 bands= ['alpha','beta']
 
 for band in bands:

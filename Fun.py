@@ -42,7 +42,13 @@ def git_push():
     except:
         print('Some error occured while pushing the code')    
 
-git_push()
+def git_pull():
+    try:
+        repo = Repo(PATH_OF_GIT_REPO)
+        origin = repo.remote(name='origin')
+        origin.pull()
+    except:
+        print('Some error occured while pulling the code')  
 
 class Stability_project:
    

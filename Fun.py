@@ -26,7 +26,9 @@ from tensorflow.keras import Model
 from sklearn import metrics as Metrics
 from git import Repo
 
-PATH_OF_GIT_REPO = r'/export02/data/Santiago/Stability_project_Code/.git'  # make sure .git folder is properly configured
+path = os.getcwd()
+ParentPath=os.path.abspath(os.path.join(path, os.pardir))
+PATH_OF_GIT_REPO = path+'/.git'  # make sure .git folder is properly configured
 COMMIT_MESSAGE = 'comment from python script'
 
 def git_push():
@@ -45,7 +47,7 @@ git_push()
 class Stability_project:
    
     def __init__(self,band,initCase):
-        self.path='./simulated/'+band+'/'
+        self.path=ParentPath+'/Stability-project_db/simulated/'+band+'/'
         self.case=initCase
 
 

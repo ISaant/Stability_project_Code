@@ -33,3 +33,8 @@ plot_spectrum(freqs1, powers1, log_powers=True,
               color='black', label='Original Spectrum')
 
 plt.show()
+
+# %% Visualizing Power Spectrum Models
+
+# Plot an example power spectrum, with a model fit
+fm1.plot(plot_peaks='shade', peak_kwargs={'color' : 'green'})

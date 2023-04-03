@@ -11,20 +11,14 @@ import matplotlib.pyplot as plt
 from Fun import *
 
 
-git_pull()
-bands= ['alpha','beta']
+# git_pull()
+# bands= ['alpha','beta']
+bands = ['alpha']
+plt.close('all')
 
-for band in bands:
-    Cases=[0.2, 0.5, 0.8] #iterar esto al final
-    Dir=Stability_project(band,0.8).OpenCase()
-    # Dir = OpenCase(case=Cases[0]) 
-    timeWindows=np.random.choice(Dir,size=50,replace=False) #iterar esto primero
-    idx=np.sort(np.random.choice(np.arange(0,250),size=250,replace=False))
-    DataFrame=Stability_project(band,0.8).Subjects(timeWindows,idx)
-    
+def plot(DataFrame):
     plt.figure()
-    PSD=np.array(DataFrame[DataFrame.columns[0:-2]])
-    freqs=np.arange(1,40,.3)
+    PSD=np.array(DataFrame[DataFrame.columns[0:-1]])
     meanA=np.mean(PSD[:250],axis=0)
     meanB=np.mean(PSD[250:],axis=0)
     stdA=np.std(PSD[:250],axis=0)
@@ -33,5 +27,18 @@ for band in bands:
     plt.plot(freqs,meanB,'g')
     plt.fill_between(freqs,meanA+stdA,meanA-stdA,alpha=.5,color='r')
     plt.fill_between(freqs,meanB+stdB,meanB-stdB,alpha=.5,color='g')
+    plt.show()
     
-git_push()
+for band in bands:
+    Cases=[0.2, 0.5, 0.8] #iterar esto al final
+    Dir=Stability_project(band,0.8).OpenCase()
+    # Dir = OpenCase(case=Cases[0]) 
+    timeWindows=np.random.choice(Dir,size=50,replace=False) #iterar esto primero
+    idx=np.sort(np.random.choice(np.arange(0,250),size=250,replace=False))
+    inBetween=[1,40]
+    DataFrameAp,DataFramePer,freqs=Stability_project(band,0.8).Subjects_PerAper(timeWindows,idx,inBetween)
+    
+    plot(DataFrameAp)
+    plot(DataFramePer)
+    
+# git_push()

@@ -1,45 +1,46 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Mar 24 11:26:35 2023
+Created on Sat Apr  1 16:11:50 2023
 
-@author: sflores
+@author: isaac
 """
 
-import tensorflow as tf
-import timeit
+class Student:
+    
+    def __init__(self,name,age,grade):
+        self.name=name
+        self.age=age
+        self.grade=grade
+    
+    def get_grade(self):
+        return self.grade 
+    
+class Course:
+    
+    def __init__(self, name, max_student):
+        self.name = name
+        self.max_student = max_student
+        self.students=[]
+        
+    def add_student(self,student):
+        if len(self.students) < self.max_student:
+            self.students.append(student)  
+    
+    def get_average_grade(self):
+        value = 0
+        for student in self.students:
+            value += student.grade
+            
+        return value/len(self.students)
 
-device_name = tf.test.gpu_device_name()
-if device_name != '/device:GPU:0':
-  print(
-      '\n\nThis error most likely means that this notebook is not '
-      'configured to use a GPU.  Change this in Notebook Settings via the '
-      'command palette (cmd/ctrl-shift-P) or the Edit menu.\n\n')
-  raise SystemError('GPU device not found')
+s1=Student('Tim', 19, 95)
+s2=Student('Jim', 19, 75)
+s3=Student('Bill', 19, 65)
 
-def cpu():
-  with tf.device('/cpu:0'):
-    random_image_cpu = tf.random.normal((100, 100, 100, 3))
-    net_cpu = tf.keras.layers.Conv2D(32, 7)(random_image_cpu)
-    return tf.math.reduce_sum(net_cpu)
+course = Course('Science', 2)
+course.add_student(s1)
+course.add_student(s2)
 
-def gpu():
-  with tf.device('/device:GPU:0'):
-    random_image_gpu = tf.random.normal((100, 100, 100, 3))
-    net_gpu = tf.keras.layers.Conv2D(32, 7)(random_image_gpu)
-    return tf.math.reduce_sum(net_gpu)
-  
-# We run each op once to warm up; see: https://stackoverflow.com/a/45067900
-cpu()
-gpu()
-
-# Run the op several times.
-print('Time (s) to convolve 32x7x7x3 filter over random 100x100x100x3 images '
-      '(batch x height x width x channel). Sum of ten runs.')
-print('CPU (s):')
-cpu_time = timeit.timeit('cpu()', number=10, setup="from __main__ import cpu")
-print(cpu_time)
-print('GPU (s):')
-gpu_time = timeit.timeit('gpu()', number=10, setup="from __main__ import gpu")
-print(gpu_time)
-print('GPU speedup over CPU: {}x'.format(int(cpu_time/gpu_time)))
+print (course.get_average_grade())
+    

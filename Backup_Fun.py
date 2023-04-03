@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed Mar 22 18:21:07 2023
+Created on Sun Apr  2 22:04:47 2023
 
 @author: isaac
 """
@@ -10,21 +10,20 @@ import numpy as np
 import pandas as pd
 import os 
 from tqdm import tqdm
-from fooof import FOOOF
-# from sklearn.model_selection import train_test_split
-# import tensorflow as tf
-# from tensorflow.keras import optimizers
-# from tensorflow.keras import losses
-# from tensorflow.keras import metrics
-# from tensorflow.keras import models
-# from tensorflow.keras import layers
-# from tensorflow.keras.optimizers import Adam
-# from tensorflow.keras.utils import to_categorical
-# from sklearn.model_selection import train_test_split
-# from tensorflow.keras.layers import Input, Dense, Activation, BatchNormalization, Flatten, Conv1D, MaxPooling1D
-# from tensorflow.keras.layers import AveragePooling2D, MaxPooling2D, Dropout, GlobalAveragePooling2D
-# from tensorflow.keras import Model
-# from sklearn import metrics as Metrics
+from sklearn.model_selection import train_test_split
+import tensorflow as tf
+from tensorflow.keras import optimizers
+from tensorflow.keras import losses
+from tensorflow.keras import metrics
+from tensorflow.keras import models
+from tensorflow.keras import layers
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.utils import to_categorical
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.layers import Input, Dense, Activation, BatchNormalization, Flatten, Conv1D, MaxPooling1D
+from tensorflow.keras.layers import AveragePooling2D, MaxPooling2D, Dropout, GlobalAveragePooling2D
+from tensorflow.keras import Model
+from sklearn import metrics as Metrics
 from git import Repo
 
 path = os.getcwd()
@@ -63,43 +62,21 @@ class Stability_project:
         Dir=np.sort(os.listdir(casePath))[2:-2]
         return Dir
     
-    def APeriodic(self,freqs,DataFrame):
-        dfPer=DataFrame.copy()
-        dfAp=DataFrame.copy()
-        for i in range(DataFrame.shape[0]):
-            
-            fm = FOOOF(max_n_peaks=1, aperiodic_mode='fixed')
-            fm.add_data(freqs, np.array(DataFrame.iloc[i]),[1,40])
-            fm.fit(freqs, np.array(DataFrame.iloc[i]), [1, 40])
-            dfPer.iloc[i]=fm._peak_fit/5
-            dfAp.iloc[i]=fm._ap_fit/5
-        return dfPer,dfAp
     
-    def Subjects_PerAper(self,timeWindows,idx,inBetween):
+    def Subjects(self,timeWindows,idx):
         print(self.case)
-        DataFrameAp=pd.DataFrame()
-        DataFramePer=pd.DataFrame()
+        DataFrame=pd.DataFrame()
         for win in tqdm(timeWindows):
             main=pd.read_csv(self.path+str(self.case)+'_250_PSD/'+win,header=None)
-            freqs=a=np.linspace(0,250,(250*3)+1,endpoint=True)
-            columns= [i for i, x in enumerate((freqs>=inBetween[0]) & (freqs<inBetween[1])) if x]
-            main=main[main.columns[columns]].iloc[np.concatenate((idx,idx+250))]
-            dfPer,dfAp=self.APeriodic(freqs[(freqs>=inBetween[0]) & (freqs<inBetween[1])],main)
-            DataFrameAp=pd.concat([DataFrameAp,dfAp],ignore_index=False)
-            DataFramePer=pd.concat([DataFramePer,dfPer],ignore_index=False)
+            DataFrame=pd.concat([DataFrame,
+                                 main[main.columns[3:134]].iloc[np.concatenate((idx,idx+250))]],
+                                 ignore_index=False)
+        DataFrame.reset_index(inplace=True)
+        DataFrame.rename({'index':'id'},axis=1,inplace=True)
+        DataFrame=DataFrame.groupby('id').mean()
+        DataFrame['Cohort']=np.concatenate((np.zeros(len(idx)),np.ones(len(idx)))).astype(int)
 
-        
-        DataFrameAp.reset_index(inplace=True)
-        DataFrameAp.rename({'index':'id'},axis=1,inplace=True)
-        DataFrameAp=DataFrameAp.groupby('id').mean()
-        DataFrameAp['Cohort']=np.concatenate((np.zeros(len(idx)),np.ones(len(idx)))).astype(int)
-        
-        DataFramePer.reset_index(inplace=True)
-        DataFramePer.rename({'index':'id'},axis=1,inplace=True)
-        DataFramePer=DataFramePer.groupby('id').mean()
-        DataFramePer['Cohort']=np.concatenate((np.zeros(len(idx)),np.ones(len(idx)))).astype(int)
-        
-        return DataFrameAp,DataFramePer,freqs[columns]
+        return DataFrame
     
 def ANN (DataFrame):
     
@@ -150,5 +127,3 @@ def ANN (DataFrame):
         batch_size=256,
         validation_split=0.1,
         verbose=1)
-    
-    

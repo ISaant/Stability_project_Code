@@ -13,6 +13,7 @@ from tqdm import tqdm
 from fooof import FOOOF
 from git import Repo
 
+
 current_path = os.getcwd()
 ParentPath=os.path.abspath(os.path.join(current_path, os.pardir))
 PATH_OF_GIT_REPO = current_path+'/.git'  # make sure .git folder is properly configured
@@ -124,7 +125,8 @@ main=Data.main
 idx=Data.idx
 
 index,count=np.unique(DataFrame.index,return_counts=True)
-
+Git().git_pull()
 Git().git_push()
+
 
     

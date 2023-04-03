@@ -9,9 +9,13 @@ Created on Sat Apr  1 17:53:11 2023
 import numpy as np
 import pandas as pd
 import os 
+import copy
+import matplotlib.pyplot as plt
+import seaborn as sns
 from tqdm import tqdm
 from fooof import FOOOF
 from git import Repo
+
 
 
 current_path = os.getcwd()
@@ -69,8 +73,86 @@ class Generate_Data:
         Dataframe['Cohort']=np.concatenate((np.zeros(len(self.idx)),np.ones(len(self.idx)))).astype(int)
         self.Dataframe=Dataframe
         self.columns=columns
-        self.freqs=freqs
+        self.freqs=freqs[columns]
      # def 
+     
+class Periodic_Aperiodic:
+    
+    def __init__(self):
+        self.periodic=pd.DataFrame()
+        self.aperiodic=pd.DataFrame()
+    
+    def fooof(self,Data):
+        inBetween=Data.in_between
+        df=copy.copy(Data.Dataframe)
+        cohort=df['Cohort']
+        df.drop(columns=['Cohort'],inplace=True)
+        periodic= copy.copy(df)
+        aperiodic=copy.copy(df)
+        parameters=[]
+        for i in tqdm(range(df.shape[0])):
+            fm = FOOOF(max_n_peaks=1, aperiodic_mode='fixed')
+            fm.add_data(Data.freqs, np.array(df.iloc[i]),inBetween)
+            fm.fit(freqs, np.array(df.iloc[i]), inBetween)
+            periodic.iloc[i]=fm._peak_fit
+            aperiodic.iloc[i]=fm._ap_fit
+            exp = fm.get_params('aperiodic_params', 'exponent')
+            offset = fm.get_params('aperiodic_params', 'offset')
+            cfs = fm.get_params('peak_params', 'CF')
+            pws = fm.get_params('peak_params', 'PW')
+            bws = fm.get_params('peak_params', 'BW')
+            parameters.append([exp,offset,cfs,pws,bws])
+        periodic['Cohort']=cohort
+        aperiodic['Cohort']=cohort
+        parameters=np.array(parameters)
+        parameters=np.concatenate((parameters,np.array([cohort]).T),axis=1)
+        parameters=pd.DataFrame(parameters, columns=['exp','offset','cfs','pws','bws','Cohort'])
+        self.periodic=periodic
+        self.aperiodic=aperiodic
+        self.parameters=parameters
+            
+    def get_Periodic(self):
+        return self.periodic
+    
+    def get_Aperiodic(self):
+        return self.aperiodic
+    
+    def get_Parameters(self):
+        return self.parameters
+    
+    def plot_parameters (self, component="periodic"):
+        assert isinstance(component, str), "component must be string: 'periodic' or 'aperiodic'"
+        x=eval("self."+component)
+        plt.figure()
+        PSD=np.array(x.iloc[:,0:-1])
+        meanA=np.mean(PSD[:int(PSD.shape[0]/2)],axis=0)
+        meanB=np.mean(PSD[int(PSD.shape[0]/2):],axis=0)
+        stdA=np.std(PSD[:int(PSD.shape[0]/2)],axis=0)
+        stdB=np.std(PSD[int(PSD.shape[0]/2):],axis=0)
+        plt.plot(freqs,meanA,'r')
+        plt.plot(freqs,meanB,'g')
+        plt.fill_between(freqs,meanA+stdA,meanA-stdA,alpha=.5,color='r')
+        plt.fill_between(freqs,meanB+stdB,meanB-stdB,alpha=.5,color='g')
+        plt.show()
+    
+    def boxplot_coeffs (self):
+        Par=self.parameters
+        fig, ax = plt.subplots(1, 5, figsize=(10, 6))
+        sns.boxplot( x=Par['Cohort'], y=Par['exp'],ax=ax[0] )
+        sns.boxplot( x=Par['Cohort'], y=Par['offset'],ax=ax[1] )
+        sns.boxplot( x=Par['Cohort'], y=Par['cfs'],ax=ax[2] )
+        sns.boxplot( x=Par['Cohort'], y=Par['pws'],ax=ax[3] )
+        sns.boxplot( x=Par['Cohort'], y=Par['bws'],ax=ax[4] )
+        plt.subplots_adjust(wspace=0.5) 
+
+        plt.show()
+        
+        
+        
+        
+    # def get_df(self,Data):
+    #     return Data.Dataframe
+
 class Git:
     def __init__ (self):
         self.git_path=PATH_OF_GIT_REPO
@@ -115,7 +197,7 @@ class Git:
 Data=Generate_Data()
 Data.get_path()
 Data.OpenCase()
-Data.Generate_Window_idx(10, 10)
+Data.Generate_Window_idx(Windows=50, sampleSize=250)
 Data.readCSV_and_Append()
 
 DataFrame=Data.Dataframe
@@ -125,6 +207,15 @@ main=Data.main
 idx=Data.idx
 
 index,count=np.unique(DataFrame.index,return_counts=True)
+
+APer=Periodic_Aperiodic()
+APer.fooof(Data)
+Per=APer.get_Periodic()
+Ap=APer.get_Aperiodic()
+Par=APer.get_Parameters()
+APer.plot_parameters('periodic')
+APer.plot_parameters('aperiodic')
+APer.boxplot_coeffs()
 Git().git_pull()
 Git().git_push()
 

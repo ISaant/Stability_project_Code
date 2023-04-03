@@ -50,7 +50,7 @@ spectrum = load_fooof_data('spectrum.npy', folder='data')
 
 # Initialize a FOOOF object
 # fm = FOOOF(min_peak_height=0.05, aperiodic_mode='fixed')
-fm = FOOOF()
+fm = FOOOF(max_n_peaks=1,aperiodic_mode='fixed')
 
 # Set the frequency range to fit the model
 freq_range = [2, 40]
@@ -90,8 +90,8 @@ cfs = fm.get_params('peak_params', 'CF')
 # Print out a custom parameter report
 template = ("With an error level of {error:1.2f}, FOOOF fit an exponent "
             "of {exponent:1.2f} and peaks of {cfs:s} Hz.")
-print(template.format(error=err, exponent=exp,
-                      cfs=' & '.join(map(str, [round(cf, 2) for cf in cfs]))))
+# print(template.format(error=err, exponent=exp,
+#                       cfs=' & '.join(map(str, [round(cf, 2) for cf in cfs]))))
 
 fres = fm.get_results() #Aperiodic, Periodic, Error, R^2, Real Gaussian values
 ap_params, peak_params, r_squared, fit_error, gauss_params = fm.get_results()

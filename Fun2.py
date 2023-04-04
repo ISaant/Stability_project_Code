@@ -184,5 +184,12 @@ APer.plot_parameters('aperiodic')
 APer.boxplot_coeffs()
 
 
+fig = plt.figure()
+ax = fig.add_subplot(111, projection = '3d')
+x=np.array(Par.loc[:,'cfs'])
+y=np.array(Par.loc[:,'pws'])
+z=np.array(Par.loc[:,'bws'])
+color=Par.loc[:,'Cohort']
+ax.scatter(x,y,z,c=color)
 
     

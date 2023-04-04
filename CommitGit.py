@@ -5,6 +5,6 @@ Created on Tue Apr  4 09:06:12 2023
 
 @author: isaac
 """
-import Git
+from Git import Git
 # Git().git_pull()
 Git().git_push()

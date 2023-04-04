@@ -18,7 +18,7 @@ from fooof import FOOOF
 
 
 
-
+plt.close('all')
 current_path = os.getcwd()
 ParentPath=os.path.abspath(os.path.join(current_path, os.pardir))
 
@@ -160,10 +160,11 @@ class Periodic_Aperiodic:
 
 # Generate_Data.band='alpha'
 # Generate_Data.in_between=[1]
+Generate_Data.band='beta'
 Data=Generate_Data()
 Data.get_path()
 Data.OpenCase()
-Data.Generate_Window_idx(Windows=50, sampleSize=250)
+Data.Generate_Window_idx(Windows=30, sampleSize=250)
 Data.readCSV_and_Append()
 
 DataFrame=Data.Dataframe
@@ -189,7 +190,10 @@ ax = fig.add_subplot(111, projection = '3d')
 x=np.array(Par.loc[:,'cfs'])
 y=np.array(Par.loc[:,'pws'])
 z=np.array(Par.loc[:,'bws'])
+ax.set_xlabel('cfs')
+ax.set_ylabel('pws')
+ax.set_zlabel('bws')
 color=Par.loc[:,'Cohort']
-ax.scatter(x,y,z,c=color)
+ax.scatter(x,y,z,c=color,alpha=.5)
 
     

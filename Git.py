@@ -24,9 +24,9 @@ class Git:
             print('Some error occured while pushing the code')    
 
     def git_pull(self):
-        try:
-            repo = Repo(self.git_path)
-            origin = repo.remote(name='origin')
-            origin.pull()
-        except:
-            print('Some error occured while pulling the code')
+        # try:
+        repo = Repo(self.git_path)
+        origin = repo.remote(name='origin')
+        origin.pull()
+        # except:
+        print('Some error occured while pulling the code')

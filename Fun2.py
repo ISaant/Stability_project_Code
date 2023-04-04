@@ -14,14 +14,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
 from fooof import FOOOF
-from git import Repo
+
+
 
 
 
 current_path = os.getcwd()
 ParentPath=os.path.abspath(os.path.join(current_path, os.pardir))
-PATH_OF_GIT_REPO = current_path+'/.git'  # make sure .git folder is properly configured
-COMMIT_MESSAGE = 'comment from python script'
 
 class Generate_Data:
     
@@ -153,40 +152,7 @@ class Periodic_Aperiodic:
     # def get_df(self,Data):
     #     return Data.Dataframe
 
-class Git:
-    def __init__ (self):
-        self.git_path=PATH_OF_GIT_REPO
-        self.message=COMMIT_MESSAGE
-    def git_push(self):
-        try:
-            repo = Repo(self.git_path)
-            # repo.git.add(update=True)
-            repo.git.add(all=True)
-            repo.index.commit(self.message)
-            origin = repo.remote(name='origin')
-            origin.push()
-        except:
-            print('Some error occured while pushing the code')    
-
-    def git_pull(self):
-        try:
-            repo = Repo(self.git_path)
-            origin = repo.remote(name='origin')
-            origin.pull()
-        except:
-            print('Some error occured while pulling the code')           
-# class Generate_Data (Paths):
-#     inBetween=[1,40]
-#     def __init__(self):
-#         super().__init__(self)
-#         self.PSD=[]
-    
-    # def add_PSD:
-    #     pass
-        # self.PSD.append()
-    
-# timeWindows=np.random.choice(Dir,size=50,replace=False) #iterar esto primero
-# idx=np.sort(np.random.choice(np.arange(0,250),size=250,replace=False))
+           
 
 # case1=Generate_Data()
 # Dir1=case1.OpenCase()
@@ -216,8 +182,7 @@ Par=APer.get_Parameters()
 APer.plot_parameters('periodic')
 APer.plot_parameters('aperiodic')
 APer.boxplot_coeffs()
-Git().git_pull()
-Git().git_push()
+
 
 
     

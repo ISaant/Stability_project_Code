@@ -1,8 +1,6 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Sat Apr  1 16:11:50 2023
-
 @author: isaac
 """
 
@@ -43,4 +41,3 @@ course.add_student(s1)
 course.add_student(s2)
 
 print (course.get_average_grade())
-    

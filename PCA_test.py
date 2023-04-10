@@ -118,16 +118,16 @@ def ACP (DataFrame):
     
     return proyecciones,prop_varianza_acum
 
-proyecciones,prop_varianza_acum=ACP(AlphaBetaCoeffDf.iloc[:,:-1])
+proyecciones,prop_varianza_acum=ACP(Per_Alpha.iloc[:,:-1])
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection = '3d')
 x=np.array(proyecciones.loc[:,'PC1'])
 y=np.array(proyecciones.loc[:,'PC2'])
-z=np.array(proyecciones.loc[:,'PC5'])
+z=np.array(proyecciones.loc[:,'PC3'])
 ax.set_xlabel('PC1')
 ax.set_ylabel('PC2')
-ax.set_zlabel('PC5')
-color=AlphaBetaCoeffDf.loc[:,'Cohort']
+ax.set_zlabel('PC3')
+color=Dataframe.loc[:,'Cohort']
 ax.scatter(x,y,z,c=color,alpha=.5)
 plt.show()

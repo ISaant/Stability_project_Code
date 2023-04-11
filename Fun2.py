@@ -233,11 +233,20 @@ class Periodic_Aperiodic:
         p=pos(len(Par.columns[:-1]))
         g=sns.pairplot(Par, hue="Cohort",corner=True)
         g.map_lower(sns.kdeplot, levels=6, color=".2")
+        
+        def cohen_d(x,y):
+            nx = len(x)
+            ny = len(y)
+            dof = nx + ny - 2
+            return (np.mean(x) - np.mean(y)) / np.sqrt(((nx-1)*np.std(x, ddof=1) ** 2 + (ny-1)*np.std(y, ddof=1) ** 2) / dof)
 
+        
         for i, col in enumerate(Par.columns[:-1]):
-            ttest=ttest_ind(Par.loc[:250,col],Par.loc[250:,col])[1]
-            print(col, ttest)
-            g.fig.text(p[i][0], p[i][1],'p= '+str(round(ttest,5)), fontsize=15, fontweight='bold')
+            # ttest=ttest_ind(Par.loc[:250,col],Par.loc[250:,col])[1]
+            cohend=cohen_d(Par.loc[:250,col],Par.loc[250:,col])
+
+            print(col, cohend)
+            g.fig.text(p[i][0], p[i][1],'cohen_d= '+str(round(cohend,5)), fontsize=15, fontweight='bold')
         
         plt.show()
         
@@ -263,7 +272,10 @@ class Periodic_Aperiodic:
                 fbank[m - 1, k] = (k - bin[m - 1]) / (bin[m] - bin[m - 1])
             for k in range(f_m, f_m_plus):
                 fbank[m - 1, k] = (bin[m + 1] - k) / (bin[m + 1] - bin[m])
+        
         fbank=fbank[:,col]
+        # plt.figure()
+        # plt.plot(self.freqs.T,fbank.T)
         filter_banks = np.dot(pow_frames, fbank.T)
         filter_banks = np.where(filter_banks == 0, np.finfo(float).eps, filter_banks)  # Numerical Stability
         # filter_banks = 20 * np.log10(filter_banks)  # dB
@@ -282,16 +294,13 @@ class Periodic_Aperiodic:
             lift = 1 + (cep_lifter / 2) * np.sin(np.pi * n / cep_lifter)
             mfcc *= lift  #*
             
-        fig, ax = plt.subplots(nrows=2, ncols=1, sharex=True)
+        # fig, ax = plt.subplots(nrows=1, ncols=1, sharex=True)
 
-            # img=librosa.display.specshow(mfcc.T, sr=sample_rate, x_axis='time', y_axis='linear')
-        img1=ax[0].imshow(mfcc,aspect='auto',cmap='jet')
-        ax[0].set_title('mfcc')
-        img2=ax[1].imshow(filter_banks,aspect='auto',cmap='jet')
-        ax[1].set_title('filter_bank')
-        fig.colorbar(img1, ax=ax[0])
-        fig.colorbar(img2, ax=ax[1])
-        plt.show()
+        #     # img=librosa.display.specshow(mfcc.T, sr=sample_rate, x_axis='time', y_axis='linear')
+        # img=ax.imshow(filter_banks,aspect='auto',cmap='jet')
+        # ax.set_title('filter_bank')
+        # fig.colorbar(img, ax=ax)
+        # plt.show()
         self.mfcc = mfcc
         self.filter_banks=filter_banks
     

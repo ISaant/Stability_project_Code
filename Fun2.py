@@ -17,10 +17,6 @@ from fooof import FOOOF
 from scipy.stats import ttest_ind
 from scipy.fftpack import dct
 
-
-
-
-plt.close('all')
 current_path = os.getcwd()
 ParentPath=os.path.abspath(os.path.join(current_path, os.pardir))
 
@@ -98,6 +94,7 @@ class Generate_Data:
         Dataframe=Dataframe.groupby('id').mean()
 
         PSD=np.array(Dataframe)
+        plt.figure()
         meanA=np.mean(PSD[:int(PSD.shape[0]/2)],axis=0)
         meanB=np.mean(PSD[int(PSD.shape[0]/2):],axis=0)
         stdA=np.std(PSD[:int(PSD.shape[0]/2)],axis=0)
@@ -116,7 +113,8 @@ class Periodic_Aperiodic:
         self.periodic=pd.DataFrame()
         self.aperiodic=pd.DataFrame()
         self.freqs=[]
-        
+        self.max_n_peaks=6
+        self.fit='fixed'
     def fooof(self,Data):
         inBetween=Data.in_between
         df=copy.copy(Data.Dataframe)
@@ -130,7 +128,7 @@ class Periodic_Aperiodic:
         self.NFFT=Data.Dataframe_full.to_numpy()[:,:-1].shape[1]*2
         parameters=[]
         for i in tqdm(range(df.shape[0])):
-            fm = FOOOF(max_n_peaks=6, aperiodic_mode='fixed')
+            fm = FOOOF(max_n_peaks=self.max_n_peaks, aperiodic_mode=self.fit)
             fm.add_data(self.freqs, np.array(df.iloc[i]),inBetween)
             fm.fit(self.freqs, np.array(df.iloc[i]), inBetween)
             periodic.iloc[i]=fm._peak_fit
@@ -232,7 +230,6 @@ class Periodic_Aperiodic:
                 x+=cx
                 y-=cy
             return p
-
         p=pos(len(Par.columns[:-1]))
         g=sns.pairplot(Par, hue="Cohort",corner=True)
         g.map_lower(sns.kdeplot, levels=6, color=".2")
@@ -284,6 +281,17 @@ class Periodic_Aperiodic:
         if sig_lift=='True':
             lift = 1 + (cep_lifter / 2) * np.sin(np.pi * n / cep_lifter)
             mfcc *= lift  #*
+            
+        fig, ax = plt.subplots(nrows=2, ncols=1, sharex=True)
+
+            # img=librosa.display.specshow(mfcc.T, sr=sample_rate, x_axis='time', y_axis='linear')
+        img1=ax[0].imshow(mfcc,aspect='auto',cmap='jet')
+        ax[0].set_title('mfcc')
+        img2=ax[1].imshow(filter_banks,aspect='auto',cmap='jet')
+        ax[1].set_title('filter_bank')
+        fig.colorbar(img1, ax=ax[0])
+        fig.colorbar(img2, ax=ax[1])
+        plt.show()
         self.mfcc = mfcc
         self.filter_banks=filter_banks
     
@@ -308,34 +316,36 @@ def getArgumentValue(argument,defaultValue,args):
     
     return value
 
-def GetStuff(band,Windows,sampleSize,seed,plot):     
+def GetStuff(band,Windows,sampleSize,seed,plot,in_between,max_n_peaks,fit):     
     Generate_Data.band=band
-    Generate_Data.in_between=[1,50]
+    Generate_Data.in_between=in_between
     Data=Generate_Data()
     # Data.get_path()
     Data.Open_effectSize()
     Data.Generate_Window_idx(Windows=Windows, sampleSize=sampleSize, seed=seed)
     Data.readCSV_and_Append()
     APer=Periodic_Aperiodic()
+    APer.max_n_peaks=max_n_peaks
+    APer.fit=fit
     APer.fooof(Data)
     APer.MFCCs()
-    Per=APer.get_Periodic()
-    Ap=APer.get_Aperiodic()
-    Par=APer.get_Parameters()
-    MFCCs,filter_banks=APer.get_MFCCs()
+    # Per=APer.get_Periodic()
+    # Ap=APer.get_Aperiodic()
+    # Par=APer.get_Parameters()
+    # MFCCs,filter_banks=APer.get_MFCCs()
     if plot:
         # plt.close('all')
         Data.plot_timeSeries()
         APer.plot_parameters('periodic')
         APer.plot_parameters('aperiodic')
-        # APer.boxplot_coeffs()
-        # APer.scatter3D()
-        # APer.scatterMatrix()
-    return Data,APer,Per,Ap, Par
+        APer.boxplot_coeffs()
+        APer.scatter3D()
+        APer.scatterMatrix()
+    return APer
 
-plt.close('all')
-Data_Alpha,APer_Alpha,Per_Alpha,Ap_Alpha, Par_Alpha = GetStuff('alpha', Windows=99, sampleSize=250,seed=2, plot=False)
-Data_Beta,APer_Beta,Per_Beta,Ap_Beta, Par_Beta = GetStuff('beta', Windows=99, sampleSize=250,seed=2, plot=False)
+
+
+# Data_Beta,APer_Beta,Per_Beta,Ap_Beta, Par_Beta = GetStuff('beta', Windows=99, sampleSize=250,seed=2, plot=False)
 # AlphaBetaCoeffDf=pd.concat([Par_Alpha.iloc[:,:-1],Par_Beta],axis=1)
 
 #clean nans

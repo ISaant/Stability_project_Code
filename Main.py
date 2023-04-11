@@ -8,37 +8,23 @@ Created on Wed Mar 22 18:19:49 2023
 
 import numpy as np
 import matplotlib.pyplot as plt
-from Fun import *
+from Fun2 import *
 
 
-# git_pull()
-# bands= ['alpha','beta']
-bands = ['alpha']
-plt.close('all')
+APer_Alpha_1peak = GetStuff('alpha', Windows=99, 
+                      sampleSize=250,seed=2, 
+                      plot=False, in_between=[1,50],
+                      max_n_peaks=1, fit='fixed')
 
-def plot(DataFrame):
-    plt.figure()
-    PSD=np.array(DataFrame[DataFrame.columns[0:-1]])
-    meanA=np.mean(PSD[:250],axis=0)
-    meanB=np.mean(PSD[250:],axis=0)
-    stdA=np.std(PSD[:250],axis=0)
-    stdB=np.std(PSD[250:],axis=0)
-    plt.plot(freqs,meanA,'r')
-    plt.plot(freqs,meanB,'g')
-    plt.fill_between(freqs,meanA+stdA,meanA-stdA,alpha=.5,color='r')
-    plt.fill_between(freqs,meanB+stdB,meanB-stdB,alpha=.5,color='g')
-    plt.show()
-    
-for band in bands:
-    Cases=[0.2, 0.5, 0.8] #iterar esto al final
-    Dir=Stability_project(band,0.8).OpenCase()
-    # Dir = OpenCase(case=Cases[0]) 
-    timeWindows=np.random.choice(Dir,size=50,replace=False) #iterar esto primero
-    idx=np.sort(np.random.choice(np.arange(0,250),size=250,replace=False))
-    inBetween=[1,40]
-    DataFrameAp,DataFramePer,freqs=Stability_project(band,0.8).Subjects_PerAper(timeWindows,idx,inBetween)
-    
-    plot(DataFrameAp)
-    plot(DataFramePer)
-    
-# git_push()
+coeffs=APer_Alpha_1peak.get_Parameters()
+# APer_Alpha_6peak = GetStuff('alpha', Windows=99, 
+#                       sampleSize=250,seed=2, 
+#                       plot=False, in_between=[1,250],
+#                       max_n_peaks=6, fit='knee')
+
+# mfcc=APer_Alpha_6peak.mfcc
+# filter_banks=APer_Alpha_6peak.filter_banks
+# Data_Beta,APer_Beta = GetStuff('beta', Windows=99, 
+#                                   sampleSize=250,seed=2, 
+#                                   plot=False, in_between=[1,250],
+#                                   max_n_peaks=1, fit='knee')

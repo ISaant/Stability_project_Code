@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon Apr 10 12:20:44 2023
+Created on Mon Apr 10 16:38:12 2023
 
 @author: isaac
 """
@@ -19,13 +19,13 @@ if device_name != '/device:GPU:0':
 
 def cpu():
   with tf.device('/cpu:0'):
-    random_image_cpu = tf.random.normal((100, 100, 2000, 3))
+    random_image_cpu = tf.random.normal((100, 100, 100, 3))
     net_cpu = tf.keras.layers.Conv2D(32, 7)(random_image_cpu)
     return tf.math.reduce_sum(net_cpu)
 
 def gpu():
   with tf.device('/device:GPU:0'):
-    random_image_gpu = tf.random.normal((100, 100, 2000, 3))
+    random_image_gpu = tf.random.normal((100, 100, 100, 3))
     net_gpu = tf.keras.layers.Conv2D(32, 7)(random_image_gpu)
     return tf.math.reduce_sum(net_gpu)
   

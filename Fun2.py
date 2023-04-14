@@ -73,7 +73,7 @@ class Generate_Data:
         Dataframe_full.reset_index(inplace=True)
         Dataframe_full.rename({'index':'id'},axis=1,inplace=True)
         Dataframe_full=Dataframe_full.groupby('id').mean()
-        Dataframe_full['Cohort']=np.concatenate((np.zeros(len(self.idx)),np.ones(len(self.idx)))).astype(int)
+        Dataframe_full['Cohort']=np.concatenate((np.zeros(250),np.ones(250))).astype(int)
         self.Dataframe=Dataframe
         self.Dataframe_full=Dataframe_full
         self.columns=columns
@@ -242,11 +242,11 @@ class Periodic_Aperiodic:
 
         
         for i, col in enumerate(Par.columns[:-1]):
-            # ttest=ttest_ind(Par.loc[:250,col],Par.loc[250:,col])[1]
+            ttest=ttest_ind(Par.loc[:250,col],Par.loc[250:,col])[1]
             cohend=cohen_d(Par.loc[:250,col],Par.loc[250:,col])
 
             print(col, cohend)
-            g.fig.text(p[i][0], p[i][1],'cohen_d= '+str(round(cohend,5)), fontsize=15, fontweight='bold')
+            g.fig.text(p[i][0], p[i][1],'p= '+str(round(ttest,5)), fontsize=15, fontweight='bold')
         
         plt.show()
         
@@ -261,6 +261,7 @@ class Periodic_Aperiodic:
         high_freq_mel = (2595 * np.log10(1 + (sample_rate / 2) / 700))  # Convert Hz to Mel
         mel_points = np.linspace(low_freq_mel, high_freq_mel, nfilt + 2)  # Equally spaced in Mel scale
         hz_points = (700 * (10**(mel_points / 2595) - 1))  # Convert Mel to Hz
+        print(hz_points)
         bin = np.floor((NFFT + 1) * hz_points / sample_rate)
         fbank = np.zeros((nfilt, int(np.floor(NFFT / 2 ))))
         for m in range(1, nfilt + 1):
@@ -274,8 +275,8 @@ class Periodic_Aperiodic:
                 fbank[m - 1, k] = (bin[m + 1] - k) / (bin[m + 1] - bin[m])
         
         fbank=fbank[:,col]
-        # plt.figure()
-        # plt.plot(self.freqs.T,fbank.T)
+        plt.figure()
+        plt.plot(self.freqs.T,fbank.T)
         filter_banks = np.dot(pow_frames, fbank.T)
         filter_banks = np.where(filter_banks == 0, np.finfo(float).eps, filter_banks)  # Numerical Stability
         # filter_banks = 20 * np.log10(filter_banks)  # dB
@@ -294,13 +295,13 @@ class Periodic_Aperiodic:
             lift = 1 + (cep_lifter / 2) * np.sin(np.pi * n / cep_lifter)
             mfcc *= lift  #*
             
-        # fig, ax = plt.subplots(nrows=1, ncols=1, sharex=True)
+        fig, ax = plt.subplots(nrows=1, ncols=1, sharex=True)
 
-        #     # img=librosa.display.specshow(mfcc.T, sr=sample_rate, x_axis='time', y_axis='linear')
-        # img=ax.imshow(filter_banks,aspect='auto',cmap='jet')
-        # ax.set_title('filter_bank')
-        # fig.colorbar(img, ax=ax)
-        # plt.show()
+            # img=librosa.display.specshow(mfcc.T, sr=sample_rate, x_axis='time', y_axis='linear')
+        img=ax.imshow(filter_banks,aspect='auto',cmap='jet')
+        ax.set_title('filter_bank')
+        fig.colorbar(img, ax=ax)
+        plt.show()
         self.mfcc = mfcc
         self.filter_banks=filter_banks
     

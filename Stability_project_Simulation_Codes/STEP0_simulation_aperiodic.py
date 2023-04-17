@@ -1,7 +1,7 @@
 # Import sim functions
 import numpy as np
 import pandas as pd
-
+import os
 from scipy.linalg import norm
 #from itertools import repeat
 
@@ -106,6 +106,10 @@ parameters_used=pd.DataFrame({'SubID' : [], 'peak_freq_beta' : [], 'peak_band_be
 
 #print('Begin simulations for group 1:')
 
+current_path = os.getcwd()
+ParentPath=os.path.abspath(os.path.join(current_path, os.pardir,os.pardir))
+Path2saveSim=ParentPath+"/Stability-project_db/simulatedTimeSeries_MultipleFeatures"
+
 for i in range(250):
     # Set some general settings, to be used across all simulations
     fs = 500 # sampling rate
@@ -137,19 +141,31 @@ for i in range(250):
     #bw = bw_beta, bw_alpha
     #height = height_beta, height_alpha
     print(i)
+    timeSeries=[]
     for j in range(100):
         signal = sim_powerlaw(n_seconds, fs, expon)
         #component = sim_components = {'sim_powerlaw': {'exponent':-2}, 'sim_oscillation': [{'freq': 10}]}
         # Simulate periodic element 
         signal = sim_peak_oscillation(signal, fs, [freq_beta,freq_alpha], [bw_beta,bw_alpha], [height_beta, height_alpha])
-        np.savetxt('/Users/admin/Desktop/test/subject_' + str(i) + '_simulation_6sec_' + str(j) +'.csv', signal, delimiter=",")
+        timeSeries.append(signal)
+    if i<10:
+        np.savetxt(Path2saveSim+'/subject_0' + str(i) + '_simulation_6sec.csv', timeSeries, delimiter=",")
+    else:
+        np.savetxt(Path2saveSim+'/subject_' + str(i) + '_simulation_6sec.csv', timeSeries, delimiter=",")
 
-    parameters_used= parameters_used.append({'SubID': i, 'peak_freq_beta':freq_beta, 'peak_band_beta':bw_beta, 'peak_height_beta':height_beta, 'peak_freq_alpha':freq_alpha, 'peak_band_alpha':bw_alpha, 'peak_height_alpha':height_alpha,'aper_expon': expon, 'group': 1}, ignore_index=True)
-    
-parameters_used.to_csv('/Users/admin/Desktop/test/low_effect_size_TWOPEAKS.csv')
+    # parameters_used= parameters_used.append({'SubID': i, 'peak_freq_beta':freq_beta, 'peak_band_beta':bw_beta, 'peak_height_beta':height_beta, 'peak_freq_alpha':freq_alpha, 'peak_band_alpha':bw_alpha, 'peak_height_alpha':height_alpha,'aper_expon': expon, 'group': 1}, ignore_index=True)
+    parameters_used= pd.concat([parameters_used,pd.DataFrame({'SubID': [i], 
+                                                              'peak_freq_beta':[freq_beta],
+                                                              'peak_band_beta':[bw_beta],
+                                                              'peak_height_beta':[height_beta],
+                                                              'peak_freq_alpha':[freq_alpha],
+                                                              'peak_band_alpha':[bw_alpha],
+                                                              'peak_height_alpha':[height_alpha],
+                                                              'aper_expon': [expon],
+                                                              'group': [1]})], ignore_index=True)
 
-# print(parameters_used)
-# parameters_used.to_csv('/Users/admin/Downloads/SimulatedData/low_effect_size_parameters_group1.csv')
+parameters_used.to_csv(Path2saveSim+'/high_effect_size_TWOPEAKS.csv')
+
 
 print('Begin simulations for group 2:')
 for i in range(250,500):
@@ -159,7 +175,7 @@ for i in range(250,500):
     times = create_times(n_seconds, fs)
     
     freq_beta=np.random.normal(19.33, 2.86)
-    freq_alpha=np.random.normal(10.19, 1.87)
+    freq_alpha=np.random.normal(8.69, 1.87)
     
     bw_beta=np.random.normal(4.98, 1.07) 
     while bw_beta <= 0:
@@ -168,50 +184,63 @@ for i in range(250,500):
     while bw_alpha <= 0:
         bw_alpha=np.random.normal(2.96, 1.79) 
         
-    height_beta=np.random.normal(0.48, 0.16)
+    height_beta=np.random.normal(0.608, 0.16)
     while height_beta <= 0:                                                          #avoid getting negative values of peak height
-        height_beta=np.random.normal(0.48, 0.16)
-    height_alpha=np.random.normal(0.57, 0.23)
+        height_beta=np.random.normal(0.608, 0.16)
+    height_alpha=np.random.normal(0.37, 0.23)
     while height_alpha <= 0:                                                          #avoid getting negative values of peak height
-        height_alpha=np.random.normal(0.57, 0.23)
+        height_alpha=np.random.normal(0.37, 0.23)
     
-    expon= np.random.normal(-0.91, 0.15)
+    expon= np.random.normal(-0.79, 0.15)
     while expon >= 0:                                                          #avoid getting negative values of peak height
-        expon=np.random.normal(-0.91, 0.15)
+        expon=np.random.normal(-0.79, 0.15)
     # Simulate aperiodic element
     #freq = freq_beta, freq_beta
     #bw = bw_beta, bw_alpha
     #height = height_beta, height_alpha
     print(i)
+    timeSeries=[]
     for j in range(100):
         signal = sim_powerlaw(n_seconds, fs, expon)
         # Simulate periodic element 
         signal = sim_peak_oscillation(signal, fs, [freq_beta,freq_alpha], [bw_beta,bw_alpha], [height_beta, height_alpha])
-        np.savetxt('/Users/admin/Desktop/test/subject_' + str(i) + '_simulation_6sec_' + str(j) +'.csv', signal, delimiter=",")
+        timeSeries.append(signal)
+    if i<10:
+        np.savetxt(Path2saveSim+'/subject_0' + str(i) + '_simulation_6sec.csv', timeSeries, delimiter=",")
+    else:
+        np.savetxt(Path2saveSim+'/subject_' + str(i) + '_simulation_6sec.csv', timeSeries, delimiter=",")
 
-    parameters_used= parameters_used.append({'SubID': i, 'peak_freq_beta':freq_beta, 'peak_band_beta':bw_beta, 'peak_height_beta':height_beta, 'peak_freq_alpha':freq_alpha, 'peak_band_alpha':bw_alpha, 'peak_height_alpha':height_alpha,'aper_expon': expon, 'group': 2}, ignore_index=True)
-   
+    # parameters_used= parameters_used.append({'SubID': i, 'peak_freq_beta':freq_beta, 'peak_band_beta':bw_beta, 'peak_height_beta':height_beta, 'peak_freq_alpha':freq_alpha, 'peak_band_alpha':bw_alpha, 'peak_height_alpha':height_alpha,'aper_expon': expon, 'group': 2}, ignore_index=True)
+    parameters_used= pd.concat([parameters_used,pd.DataFrame({'SubID': [i], 
+                                                              'peak_freq_beta':[freq_beta],
+                                                              'peak_band_beta':[bw_beta],
+                                                              'peak_height_beta':[height_beta],
+                                                              'peak_freq_alpha':[freq_alpha],
+                                                              'peak_band_alpha':[bw_alpha],
+                                                              'peak_height_alpha':[height_alpha],
+                                                              'aper_expon': [expon],
+                                                              'group': [2]})], ignore_index=True)
 
-print(parameters_used)
+# print(parameters_used)
 
-parameters_used.to_csv('/Users/admin/Desktop/test/low_effect_size_TWOPEAKS.csv')
+parameters_used.to_csv(Path2saveSim+'/high_effect_size_TWOPEAKS.csv')
 
-# Conduct a two-sided t-test
-parameters_used = pd.read_csv('/Users/admin/Desktop/test/low_effect_size_TWOPEAKS.csv')
-parameters_used = parameters_used.drop(parameters_used.columns[[0]], axis=1)
+# # Conduct a two-sided t-test
+# parameters_used = pd.read_csv('/Users/admin/Desktop/test/low_effect_size_TWOPEAKS.csv')
+# parameters_used = parameters_used.drop(parameters_used.columns[[0]], axis=1)
 
-mask = parameters_used['group'] == 1
-group_1 = parameters_used[mask]
-group_2 = parameters_used[~mask] 
-#print (group_1)
-print (group_2)
+# mask = parameters_used['group'] == 1
+# group_1 = parameters_used[mask]
+# group_2 = parameters_used[~mask] 
+# #print (group_1)
+# print (group_2)
 
-from scipy.stats import ttest_ind
-peak_freq_ttest_beta = ttest_ind(group_1['peak_freq_beta'],group_2['peak_freq_beta'])
-peak_freq_ttest_alpha = ttest_ind(group_1['peak_freq_alpha'],group_2['peak_freq_alpha'])
-peak_band_ttest_beta = ttest_ind(group_1['peak_band_beta'],group_2['peak_band_beta'])
-peak_band_ttest_alpha = ttest_ind(group_1['peak_band_alpha'],group_2['peak_band_alpha'])
-peak_height_ttest_beta = ttest_ind(group_1['peak_height_beta'],group_2['peak_height_beta'])
-peak_height_ttest_alpha = ttest_ind(group_1['peak_height_alpha'],group_2['peak_height_alpha'])
-aper_expon_ttest = ttest_ind(group_1['aper_expon'],group_2['aper_expon'])
-print(peak_freq_ttest_beta, peak_freq_ttest_alpha, peak_band_ttest_beta, peak_band_ttest_alpha, peak_height_ttest_beta, peak_height_ttest_alpha, aper_expon_ttest)
+# from scipy.stats import ttest_ind
+# peak_freq_ttest_beta = ttest_ind(group_1['peak_freq_beta'],group_2['peak_freq_beta'])
+# peak_freq_ttest_alpha = ttest_ind(group_1['peak_freq_alpha'],group_2['peak_freq_alpha'])
+# peak_band_ttest_beta = ttest_ind(group_1['peak_band_beta'],group_2['peak_band_beta'])
+# peak_band_ttest_alpha = ttest_ind(group_1['peak_band_alpha'],group_2['peak_band_alpha'])
+# peak_height_ttest_beta = ttest_ind(group_1['peak_height_beta'],group_2['peak_height_beta'])
+# peak_height_ttest_alpha = ttest_ind(group_1['peak_height_alpha'],group_2['peak_height_alpha'])
+# aper_expon_ttest = ttest_ind(group_1['aper_expon'],group_2['aper_expon'])
+# print(peak_freq_ttest_beta, peak_freq_ttest_alpha, peak_band_ttest_beta, peak_band_ttest_alpha, peak_height_ttest_beta, peak_height_ttest_alpha, aper_expon_ttest)

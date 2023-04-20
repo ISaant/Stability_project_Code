@@ -346,11 +346,11 @@ def GetStuff(band,Windows,sampleSize,seed,plot,in_between,max_n_peaks,fit):
     if plot:
         # plt.close('all')
         Data.plot_timeSeries()
-        APer.plot_parameters('periodic')
-        APer.plot_parameters('aperiodic')
-        APer.boxplot_coeffs()
-        APer.scatter3D()
-        APer.scatterMatrix()
+        # APer.plot_parameters('periodic')
+        # APer.plot_parameters('aperiodic')
+        # APer.boxplot_coeffs()
+        # APer.scatter3D()
+        # APer.scatterMatrix()
     return APer
 
 

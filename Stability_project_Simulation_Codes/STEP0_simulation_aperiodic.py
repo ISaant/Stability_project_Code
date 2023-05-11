@@ -226,21 +226,21 @@ for i in range(250,500):
 parameters_used.to_csv(Path2saveSim+'/high_effect_size_TWOPEAKS.csv')
 
 # # Conduct a two-sided t-test
-# parameters_used = pd.read_csv('/Users/admin/Desktop/test/low_effect_size_TWOPEAKS.csv')
-# parameters_used = parameters_used.drop(parameters_used.columns[[0]], axis=1)
+parameters_used = pd.read_csv('/Users/admin/Desktop/test/low_effect_size_TWOPEAKS.csv')
+parameters_used = parameters_used.drop(parameters_used.columns[[0]], axis=1)
 
-# mask = parameters_used['group'] == 1
-# group_1 = parameters_used[mask]
-# group_2 = parameters_used[~mask] 
-# #print (group_1)
-# print (group_2)
+mask = parameters_used['group'] == 1
+group_1 = parameters_used[mask]
+group_2 = parameters_used[~mask] 
+#print (group_1)
+print (group_2)
 
-# from scipy.stats import ttest_ind
-# peak_freq_ttest_beta = ttest_ind(group_1['peak_freq_beta'],group_2['peak_freq_beta'])
-# peak_freq_ttest_alpha = ttest_ind(group_1['peak_freq_alpha'],group_2['peak_freq_alpha'])
-# peak_band_ttest_beta = ttest_ind(group_1['peak_band_beta'],group_2['peak_band_beta'])
-# peak_band_ttest_alpha = ttest_ind(group_1['peak_band_alpha'],group_2['peak_band_alpha'])
-# peak_height_ttest_beta = ttest_ind(group_1['peak_height_beta'],group_2['peak_height_beta'])
-# peak_height_ttest_alpha = ttest_ind(group_1['peak_height_alpha'],group_2['peak_height_alpha'])
-# aper_expon_ttest = ttest_ind(group_1['aper_expon'],group_2['aper_expon'])
-# print(peak_freq_ttest_beta, peak_freq_ttest_alpha, peak_band_ttest_beta, peak_band_ttest_alpha, peak_height_ttest_beta, peak_height_ttest_alpha, aper_expon_ttest)
+from scipy.stats import ttest_ind
+peak_freq_ttest_beta = ttest_ind(group_1['peak_freq_beta'],group_2['peak_freq_beta'])
+peak_freq_ttest_alpha = ttest_ind(group_1['peak_freq_alpha'],group_2['peak_freq_alpha'])
+peak_band_ttest_beta = ttest_ind(group_1['peak_band_beta'],group_2['peak_band_beta'])
+peak_band_ttest_alpha = ttest_ind(group_1['peak_band_alpha'],group_2['peak_band_alpha'])
+peak_height_ttest_beta = ttest_ind(group_1['peak_height_beta'],group_2['peak_height_beta'])
+peak_height_ttest_alpha = ttest_ind(group_1['peak_height_alpha'],group_2['peak_height_alpha'])
+aper_expon_ttest = ttest_ind(group_1['aper_expon'],group_2['aper_expon'])
+print(peak_freq_ttest_beta, peak_freq_ttest_alpha, peak_band_ttest_beta, peak_band_ttest_alpha, peak_height_ttest_beta, peak_height_ttest_alpha, aper_expon_ttest)

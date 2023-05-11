@@ -61,19 +61,18 @@ Mean/=(roi+1)
 plot(freqs[columns],Mean,'k')
 
 #%%  
-columnsInBetween= [i for i, x in enumerate((freqs[columns]>=inBetween[0]) & (freqs[columns]<inBetween[1])) if x]
 newFreqs=freqs[columns]
-newFreqs=newFreqs[columnsInBetween]
-periodic= copy.copy(restStateCropped)
-aperiodic=copy.copy(restStateCropped)
-whitened=copy.copy(restStateCropped)
+columnsInBetween= [i for i, x in enumerate((newFreqs>=inBetween[0]) & (newFreqs<inBetween[1]+.5)) if x]
+periodic= np.zeros((68,606,len(columnsInBetween)))
+aperiodic=np.zeros((68,606,len(columnsInBetween)))
+whitened=np.zeros((68,606,len(columnsInBetween)))
 parameters=[]
 for roi in tqdm(range(ROI)):
     Roi=[]
     for sub in range(Sub):
         fm = FOOOF(max_n_peaks=6, aperiodic_mode='fixed',min_peak_height=0.15)
-        fm.add_data(freqs, restStateCropped[roi,sub,:],inBetween) #freqs[0]<inBetween[:]<freqs[1]
-        fm.fit(freqs[columns], restStateCropped[roi,sub,:], inBetween)
+        fm.add_data(newFreqs, restStateCropped[roi,sub,:],inBetween) #freqs[0]<inBetween[:]<freqs[1]
+        fm.fit(newFreqs, restStateCropped[roi,sub,:], inBetween)
         periodic[roi,sub,:]=fm._peak_fit
         aperiodic[roi,sub,:]=fm._ap_fit
         whitened[roi,sub,:]=fm.power_spectrum-fm._ap_fit
@@ -84,7 +83,7 @@ for roi in tqdm(range(ROI)):
         bws = fm.get_params('peak_params', 'BW')
         Roi.append([exp,offset,cfs,pws,bws])
     parameters.append(Roi)
-    
+freqsInBetween=fm.freqs
     
     
     

@@ -34,7 +34,7 @@ class Generate_Data:
         assert np.array(Generate_Data.in_between).shape[0] == 2, "Between must be a list of len=2 with values [low freq, top freq]" 
         
         #Assign to self object
-        self.path = ParentPath+'/Stability-project_db/PSDfromTimeSeries_MultipleFeatures/'
+        self.path = ParentPath+'/Stability-project_db/PSD_Multitapers_fromTimeSeries_MultipleFeatures/'
         
     def get_path (self):
         print(self.path, '  +  effectSize='+str(self.effectSize)+'_250_PSD')
@@ -42,7 +42,9 @@ class Generate_Data:
     def Open_effectSize (self):
         effectSizePath=self.path+str(Generate_Data.effectSize)+'_250_PSD'
         Dir=np.sort(os.listdir(effectSizePath))
-        self.Dir=Dir
+        freqs=(pd.read_csv(effectSizePath+'/'+Dir[-1]).to_numpy())
+        self.freqs=freqs.reshape(len(freqs,))
+        self.Dir=Dir[:-1]
 
     def Generate_Window_idx (self, Windows=10,sampleSize=250,seed=21):
         #Run Validation to the recived arguments
@@ -59,7 +61,9 @@ class Generate_Data:
     def readCSV_and_Append (self):
         Dataframe=pd.DataFrame()
         Dataframe_full=pd.DataFrame()
-        freqs=np.linspace(0,250,(250*3)+1,endpoint=True)
+        # freqs=np.linspace(0,250,(250*6)+1,endpoint=True)
+        # freqs=pd.read_csv(self.path+str(self.effectSize)+'_250_PSD/'+win,header=None)
+        freqs=self.freqs
         columns= [i for i, x in enumerate((freqs>=self.in_between[0]) & (freqs<self.in_between[1])) if x]
         for win in tqdm(self.timeWindows):
             main=pd.read_csv(self.path+str(self.effectSize)+'_250_PSD/'+win,header=None)
@@ -81,7 +85,7 @@ class Generate_Data:
         self.freqs_full=freqs
     
     def plot_timeSeries(self):
-        freqs=np.linspace(0,250,(250*3)+1,endpoint=True)
+        freqs=self.freqs
         Dataframe=pd.DataFrame()
         columns= [i for i, x in enumerate((freqs>=self.in_between[0]) & (freqs<self.in_between[1])) if x]
         freqs=freqs[columns]
@@ -99,11 +103,12 @@ class Generate_Data:
         meanB=np.mean(PSD[int(PSD.shape[0]/2):],axis=0)
         stdA=np.std(PSD[:int(PSD.shape[0]/2)],axis=0)
         stdB=np.std(PSD[int(PSD.shape[0]/2):],axis=0)
-        # plt.plot(np.log(freqs),np.log(meanA),'r')
-        # plt.plot(np.log(freqs),np.log(meanB),'g')
+        
         print(np.sqrt(PSD.shape[0]/2))
         coefIntervalA=(1.96*(stdA)/np.sqrt(PSD.shape[0]/2))
         coefIntervalB=(1.96*(stdB)/np.sqrt(PSD.shape[0]/2))
+        # plt.plot(np.log(freqs),np.log(meanA),'r')
+        # plt.plot(np.log(freqs),np.log(meanB),'g')
         # plt.fill_between(np.log(freqs),np.log(meanA+coefIntervalA),np.log(meanA-coefIntervalA),alpha=.5,color='r')
         # plt.fill_between(np.log(freqs),np.log(meanB+coefIntervalB),np.log(meanB-coefIntervalB),alpha=.5,color='g')
         plt.plot(freqs,meanA,'r')
@@ -113,8 +118,10 @@ class Generate_Data:
         
         plt.title('Band= '+Generate_Data.band+', Mean A vs B groups, all widows, all sujects. Freqs between'+str(self.in_between))
         plt.show()
-            
-     
+        
+    
+        
+        
 class Periodic_Aperiodic:
     
     def __init__(self):
@@ -315,6 +322,29 @@ class Periodic_Aperiodic:
     
     def get_MFCCs(self):
         return self.mfcc, self.filter_banks
+    
+    def cohen_d_alpha_Beta(self):
+        
+        def cohen_d(x,y):
+            nx = len(x)
+            ny = len(y)
+            Spool=np.sqrt((np.std(x) ** 2 + np.std(y) ** 2) / 2)
+            return (np.mean(x) - np.mean(y)) / Spool
+
+        alfa=[]
+        beta=[]
+        alfa_freqs= [i for i, x in enumerate((self.freqs>=7) & (self.freqs<13)) if x]
+        beta_freqs= [i for i, x in enumerate((self.freqs>=14) & (self.freqs<30)) if x]
+        for i,PSD in enumerate(self.whitened.to_numpy()):
+             # PSD=PSD[:-1]
+             alfa.append(PSD[alfa_freqs])
+             beta.append(PSD[beta_freqs])
+             
+        cohen_d_alpha=cohen_d(alfa[:250], alfa[250:])
+        cohen_d_beta=cohen_d(beta[:250], beta[250:])
+        print('cohen_d_alpha = '+str(cohen_d_alpha),'cohen_d_beta = ' + str(cohen_d_beta))
+        self.cohen_d_alpha=cohen_d_alpha
+        self.cohen_d_beta=cohen_d_beta
         
     # def get_df(self,Data):
     #     return Data.Dataframe
@@ -354,12 +384,12 @@ def GetStuff(band,Windows,sampleSize,seed,plot,in_between,max_n_peaks,fit):
     if plot:
         # plt.close('all')
         Data.plot_timeSeries()
-        # APer.plot_parameters('periodic')
-        # APer.plot_parameters('aperiodic')
+        APer.plot_parameters('periodic')
+        APer.plot_parameters('aperiodic')
         # APer.boxplot_coeffs()
         # APer.scatter3D()
         # APer.scatterMatrix()
-    return APer
+    return Data,APer
 
 
 

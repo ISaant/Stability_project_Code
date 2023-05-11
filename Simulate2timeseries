@@ -97,11 +97,16 @@ def sim_peak_oscillation(sig_ap, fs, freq, bw, height):
 
     # Add cosines with the respective coefficients and with a random phase shift for each one
     sig_periodic = np.sum(np.array([cosine_coeffs[ell] * \
-                                   np.cos(2 * np.pi * freqs[ell] * times + \
+                                    np.cos(2 * np.pi * freqs[ell] * times + \
                                           2 * np.pi * np.random.rand()) \
                           for ell in range(cosine_norms.shape[0])]), axis=0)
+    # sig_periodic = np.sum(np.array([cosine_coeffs[ell] * \
+    #                                 np.cos(2 * np.pi * freqs[ell] * times + \
+    #                                       2 * np.pi * 1) \
+    #                       for ell in range(cosine_norms.shape[0])]), axis=0)
 
     sig = sig_ap + sig_periodic
+    # sig = sig_periodic
 
     return sig
 fs = 500 # sampling rate
@@ -133,17 +138,33 @@ while expon >= 0:                                                          #avoi
 #bw = bw_beta, bw_alpha
 #height = height_beta, height_alpha
 time=np.arange(0,n_seconds,1/fs)
-in_between=[1,50]
+in_between=[1,40]
 print(height_alpha,height_beta,bw_alpha,bw_beta,freq_alpha,freq_beta,expon)
-for j in range(2):
+SepPSD=[]
+for j in range(10):
+  
     signal = sim_powerlaw(n_seconds, fs, expon)
-    #component = sim_components = {'sim_powerlaw': {'exponent':-2}, 'sim_oscillation': [{'freq': 10}]}
     # Simulate periodic element 
-    fig, axs = plt.subplots(2)
     signal = sim_peak_oscillation(signal, fs, [freq_beta,freq_alpha], [bw_beta,bw_alpha], [height_beta, height_alpha])
-    freqs, psd_mean=welch(signal, fs,nperseg=1500,noverlap=750)
+    freqs, psd_mean=welch(signal, fs,nperseg=3000,noverlap=1500)
     columns= [i for i, x in enumerate((freqs>=in_between[0]) & (freqs<in_between[1])) if x]
-    axs[0].plot(time,signal,'r')
-    axs[1].plot(freqs[columns],psd_mean[columns],'r')
+    SepPSD.append(psd_mean[columns])
+fig, axs = plt.subplots(6)
+for i in range(5): 
+    axs[i].plot(freqs[columns],SepPSD[i],'r')
+axs[5].plot(freqs[columns],np.mean(SepPSD,axis=0),'r')
+
+#%%
+n_seconds = 60 # length of recording 
+signal = sim_powerlaw(n_seconds, fs, expon) 
+signal = sim_peak_oscillation(signal, fs, [freq_beta,freq_alpha], [bw_beta,bw_alpha], [height_beta, height_alpha])
+
+fig, axs = plt.subplots(6)
+for i,j in enumerate(np.arange(0,len(signal),int(len(signal)/5))):
+    freqs, psd=welch(signal[j:j+int(len(signal)/5)], fs,nperseg=3000,noverlap=1500)
+    axs[i].plot(freqs[columns],psd[columns],'b')
+
+freqs, psd=welch(signal, fs,nperseg=3000,noverlap=1500)
+axs[5].plot(freqs[columns],psd[columns],'b')
     
     

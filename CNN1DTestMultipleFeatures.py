@@ -23,15 +23,151 @@ import matplotlib.pyplot as plt
 from sklearn import svm, datasets
 from sklearn.inspection import DecisionBoundaryDisplay
 from sklearn.metrics import accuracy_score
-#%%
-APer_Alpha_1peak = GetStuff('alpha', Windows=99, 
-                      sampleSize=250,seed=2, 
-                      plot=True, in_between=[1,50],
-                      max_n_peaks=1, fit='fixed')
+from sklearn.decomposition import PCA
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+
 
 #%%
-freqs=np.linspace(1,49,(49*3),endpoint=True)
-PSD=np.array(APer_Alpha_1peak.whitened)
+# ==============================================================================
+
+def ACP (DataFrame,verbose,scatterMatrix,nPca,labels):
+    if verbose:
+        
+        print('----------------------')
+        print('Media de cada variable')
+        print('----------------------')
+        print(DataFrame.mean(axis=0))
+        
+        
+        print('-------------------------')
+        print('Varianza de cada variable')
+        print('-------------------------')
+        print(DataFrame.var(axis=0))
+    
+    #Etiqueta de componentes a calcular
+    # ==========================================================================
+    Etiquetas=[]
+    for i in range(len(DataFrame.keys())):
+        Etiquetas.append('PC'+str(i+1))
+    
+    # Entrenamiento modelo PCA con escalado de los datos
+    # ==============================================================================
+    pca_pipe = make_pipeline(StandardScaler(), PCA())
+    pca_pipe.fit(DataFrame)
+    
+    # Se extrae el modelo entrenado del pipeline
+    modelo_pca = pca_pipe.named_steps['pca']
+    
+    dfPca=pd.DataFrame(
+        data    = modelo_pca.components_,
+        columns = DataFrame.columns,
+        index   = Etiquetas
+    )
+    if verbose:
+        print(dfPca)
+    
+    # Heatmap componentes
+    # ==============================================================================
+    
+    componentes = modelo_pca.components_
+    if verbose:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(4, 2))
+        plt.imshow(componentes.T, cmap='viridis', aspect='auto')
+        plt.yticks(range(len(DataFrame.columns)), DataFrame.columns)
+        plt.xticks(range(len(DataFrame.columns)), np.arange(modelo_pca.n_components_) + 1)
+        plt.grid(False)
+        plt.colorbar();
+    
+    
+    # Porcentaje de varianza explicada por cada componente
+    # ==============================================================================
+    if verbose:
+        print('----------------------------------------------------')
+        print('Porcentaje de varianza explicada por cada componente')
+        print('----------------------------------------------------')
+        print(modelo_pca.explained_variance_ratio_)
+        
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6, 4))
+        ax.bar(
+            x      = np.arange(modelo_pca.n_components_) + 1,
+            height = modelo_pca.explained_variance_ratio_
+        )
+    
+        for x, y in zip(np.arange(len(DataFrame.columns)) + 1, modelo_pca.explained_variance_ratio_):
+            label = round(y, 2)
+            ax.annotate(
+                label,
+                (x,y),
+                textcoords="offset points",
+                xytext=(0,10),
+                ha='center'
+            )
+    
+        ax.set_xticks(np.arange(modelo_pca.n_components_) + 1)
+        ax.set_ylim(0, 1.1)
+        ax.set_title('Porcentaje de varianza explicada por cada componente')
+        ax.set_xlabel('Componente principal')
+        ax.set_ylabel('Por. varianza explicada');
+    
+    # Porcentaje de varianza explicada acumulada
+    # ==============================================================================
+    prop_varianza_acum = modelo_pca.explained_variance_ratio_.cumsum()
+    if verbose:
+        print('------------------------------------------')
+        print('Porcentaje de varianza explicada acumulada')
+        print('------------------------------------------')
+        print(prop_varianza_acum)
+    
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6, 4))
+        ax.plot(
+            np.arange(len(DataFrame.columns)) + 1,
+            prop_varianza_acum,
+            marker = 'o'
+        )
+    
+        for x, y in zip(np.arange(len(DataFrame.columns)) + 1, prop_varianza_acum):
+            label = round(y, 2)
+            ax.annotate(
+                label,
+                (x,y),
+                textcoords="offset points",
+                xytext=(0,10),
+                ha='center'
+            )
+            
+        ax.set_ylim(0, 1.1)
+        ax.set_xticks(np.arange(modelo_pca.n_components_) + 1)
+        ax.set_title('Porcentaje de varianza explicada acumulada')
+        ax.set_xlabel('Componente principal')
+        ax.set_ylabel('Por. varianza acumulada');
+    
+    proyecciones = pca_pipe.transform(X=DataFrame)
+    proyecciones = pd.DataFrame(
+        proyecciones,
+        columns = Etiquetas,
+        index   = DataFrame.index
+    )
+    pro2use=proyecciones.iloc[:,:nPca]
+    pro2use['Cohort']=labels
+    if verbose:
+        print(proyecciones.head())
+    
+    if scatterMatrix:
+        g=sns.pairplot(pro2use, hue="Cohort",corner=True)
+        g.map_lower(sns.kdeplot, levels=6, color=".2")
+    
+    return proyecciones,prop_varianza_acum
+
+#%%
+Data,Aper = GetStuff('alpha', Windows=99, 
+                      sampleSize=250,seed=2, 
+                      plot=False, in_between=[1,40],
+                      max_n_peaks=6, fit='fixed')
+
+#%%
+freqs=Data.freqs
+PSD=np.array(Aper.whitened)
 plt.figure()
 meanA=np.mean(PSD[:int(PSD.shape[0]/2)],axis=0)
 meanB=np.mean(PSD[int(PSD.shape[0]/2):],axis=0)
@@ -46,18 +182,22 @@ coefIntervalB=(1.96*(stdB)/np.sqrt(PSD.shape[0]/2))
 # plt.fill_between(np.log(freqs),np.log(meanB+coefIntervalB),np.log(meanB-coefIntervalB),alpha=.5,color='g')
 plt.plot(freqs,meanA,'r')
 plt.plot(freqs,meanB,'g')
-plt.fill_between(freqs,meanA+coefIntervalA,meanA-coefIntervalA,alpha=.5,color='r')
-plt.fill_between(freqs,meanB+coefIntervalB,meanB-coefIntervalB,alpha=.5,color='g')
+# plt.fill_between(freqs,meanA+coefIntervalA,meanA-coefIntervalA,alpha=.5,color='r')
+# plt.fill_between(freqs,meanB+coefIntervalB,meanB-coefIntervalB,alpha=.5,color='g')
+plt.fill_between(freqs,meanA+stdA,meanA-stdA,alpha=.5,color='r')
+plt.fill_between(freqs,meanB+stdB,meanB-stdB,alpha=.5,color='g')
 
-plt.title('Band= '+Generate_Data.band+', Mean A vs B groups, all widows, all sujects. Freqs between'+str(APer_Alpha_1peak.in_between))
+
+plt.title('Band= '+Generate_Data.band+', Mean A vs B groups, all widows, all sujects. Freqs between'+str(Data.in_between))
 plt.show()
 
 #%%
-labels=APer_Alpha_1peak.periodic['Cohort'].to_numpy()
-matrix=APer_Alpha_1peak.whitened.to_numpy()
+labels=Aper.periodic['Cohort'].to_numpy()
+matrix=Aper.whitened.to_numpy()
 scaler = MinMaxScaler(feature_range=(0,1))
 scaled_trained_samples=scaler.fit_transform(matrix)
-PSD = matrix.reshape(matrix.shape[0], matrix.shape[1], 1)
+# PSD = matrix.reshape(matrix.shape[0], matrix.shape[1], 1)
+PSD = scaled_trained_samples.reshape(scaled_trained_samples.shape[0], scaled_trained_samples.shape[1], 1)
 
 x_train, x_test, y_train, y_test = train_test_split(PSD,
                                                     labels,
@@ -104,3 +244,45 @@ print("Evaluate on test data")
 results = model.evaluate(x_test, y_test, batch_size=64)
 print(results)
 # return results
+
+#%%
+
+labels=Aper.periodic['Cohort'].to_numpy()
+matrix=Aper.whitened
+proyecciones,prop_varianza_acum=ACP(matrix,True,True,5,labels)
+scaler = MinMaxScaler(feature_range=(0,1))
+scaled_trained_samples=scaler.fit_transform(matrix.to_numpy())
+X=proyecciones.to_numpy()[:,:20]
+y=labels
+x_train, x_test, y_train, y_test = train_test_split(X,y,
+                                                      test_size=.3)
+C = .1  # SVM regularization parameter
+clf = svm.SVC(C=C,kernel='rbf').fit(x_train, y_train)
+    
+
+title ="SVC with linear kernel"
+    
+
+# Set-up 2x2 grid for plotting.
+# fig, ax = plt.subplots(1, 1)
+# plt.subplots_adjust(wspace=0.4, hspace=0.4)
+
+X0, X1 = X[:, 0], X[:, 1]
+y_pred=clf.predict(x_test)
+acc=accuracy_score(y_test, y_pred)*100
+print(acc)
+# disp = DecisionBoundaryDisplay.from_estimator(
+#     clf,
+#     X,
+#     response_method="predict",
+#     cmap=plt.cm.coolwarm,
+#     alpha=0.8,
+#     ax=ax,
+#     xlabel='Alpha_Power',
+#     ylabel='Beta_Power',
+# )
+# ax.scatter(X0, X1, c=y, cmap=plt.cm.coolwarm, s=20, edgecolors="k")
+# ax.set_xticks(())
+# ax.set_yticks(())
+# ax.set_title(title+', acc= '+str((accuracy_score(y_test, y_pred)*100)))
+

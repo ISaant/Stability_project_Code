@@ -118,7 +118,7 @@ labels=np.delete(target, idx)
 Data=np.delete(pca_df, idx,axis=0)
 #%% Perceptron
 keras.backend.clear_session()
-x_train, x_test, y_train, y_test=Split(Data[:,:100],labels,.3,False)
+x_train, x_test, y_train, y_test=Split(Data[:,:70],labels,.3,False)
 Input0=tf.keras.Input(shape=(x_train.shape[1],), )
 model=Perceptron (Input0)
 trainModel(model,x_train,y_train,True)

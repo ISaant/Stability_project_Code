@@ -10,9 +10,12 @@ import pandas as pd
 import numpy as np
 import copy
 import seaborn as sns
+import tensorflow as tf
+from tensorflow import keras
 from tqdm import tqdm
 from matplotlib.pyplot import plot, figure
 from Fun4CamCanJason import *
+from FunClassifier4CamCanJason import *
 from fooof import FOOOF
 from sklearn.model_selection import train_test_split
 #%% Hyperparameters
@@ -39,7 +42,7 @@ taskDir=np.sort(os.listdir(path2Data+mainDir[2]+'/'))
 demographics=pd.read_csv(path2Data+mainDir[0])
 Catell=demographics['Catell_score'].to_numpy()
 Age=demographics['age'].to_numpy()
-for e,file in enumerate(tqdm(restStateDir)):
+for e,file in enumerate(tqdm([restStateDir[0]])):
     matrix=pd.read_csv(path2Data+mainDir[1]+'/'+file,header=None)
     if e == 0:
         print (e)
@@ -48,7 +51,7 @@ for e,file in enumerate(tqdm(restStateDir)):
     restState+=matrix
 restStateOriginal=restState
 restStateOriginal/=(e+1)
-restState = myReshape(restStateOriginal.to_numpy()) #reshape into [ROI,subjects,PSD]
+restState = myReshape(restStateOriginal.to_numpy()) #reshape into [Subjects,PSD,ROI]
 restStateCropped = restState[:,columns,:] # Select the band-width of interest
 
 #%% Plot global mean and mean per ROI
@@ -104,6 +107,7 @@ sns.boxplot(Var)
 plt.ylim((0,1))
 
 #%%
+nPca=68
 pca_df,pro2use,prop_varianza_acum=myPCA (restStateOriginal,True, nPca)
 
 
@@ -111,101 +115,14 @@ pca_df,pro2use,prop_varianza_acum=myPCA (restStateOriginal,True, nPca)
 target=Age
 idx=np.argwhere(np.isnan(target))
 labels=np.delete(target, idx)
-Data=np.delete(whitened, idx,axis=0)
-#%%
-# Data=Data.reshape((603,27,68))
+Data=np.delete(pca_df, idx,axis=0)
+#%% Perceptron
 keras.backend.clear_session()
-x_train, x_test, y_train, y_test = train_test_split(Data[:,:100], labels, test_size=0.3, random_state=42)
-scaler=StandardScaler()
-scaler.fit(x_train)
-x_train_scaled=scaler.transform(x_train)
-x_test_scaled=scaler.transform(x_test)
-Input0=tf.keras.Input(shape=(x_train_scaled.shape[1],), )
-# Input1=tf.keras.Input(shape=(x_train[:,1].shape[1],), )
+x_train, x_test, y_train, y_test=Split(Data[:,:100],labels,.3,False)
+Input0=tf.keras.Input(shape=(x_train.shape[1],), )
+model=Perceptron (Input0)
+trainModel(model,x_train,y_train,True)
+pred=evaluateModel(model,x_test,y_test)
+plotPredictions(pred,y_test)
+    
 
-NN0 = Dense(128, activation='sigmoid')(Input0)
-NN0 = Dense(64, activation='relu')(NN0)
-# NN0 = Dense(32, activation='sigmoid')(NN0)
-NN0 = Dense(32, activation='sigmoid')(NN0)
-NN0 = Dense(16, activation='relu')(NN0)
-output = Dense(1)(NN0)
-# NN1 = Dense(128, activation='sigmoid')(Input1)
-# NN1 = Dense(64, activation='selu')(NN1)
-# NN1 = Dense(32, activation='tanh')(NN1)
-# NN1 = Dense(32, activation='relu')(NN1)
-
-# x = layers.concatenate([NN0,NN1])
-# x = layers.concatenate([NN,CNN])
-
-# Prob_Dense = Dense(64, activation='tanh',name="Last_NN_Targets")(x)
-# # Prob_Dense = Dropout(.3)(Prob_Dense)
-# Prob_Dense = Dense(64, activation='relu')(Prob_Dense)
-# Prob_Dense = Dense(64, activation='sigmoid')(Prob_Dense)
-# Prob_Dense = Dense(32, activation='relu')(Prob_Dense)
-# Prob_Dense = Dense(96, activation='tanh')(Prob_Dense)#Ampliar para arquitectura encoder decoder
-# Prob_Dense = Dense(16, activation='relu')(Prob_Dense)
-
-# output = Dense(1, activation='linear')(Prob_Dense)
-
-model = Model(
-    inputs=Input0,
-    # inputs=[DWT_Input,MFCCs_Input],
-    outputs=output)
-
-model.compile(optimizer=Adam(lr=.001),
-              loss='mean_squared_error',
-              metrics=['mape'])
-
-# model.summary()
-#%%
-
-history = model.fit(x_train, 
-                    y_train, 
-                    validation_split=0.2, 
-                    batch_size=64,
-                    epochs =1000)
-
-
-#%%
-from matplotlib import pyplot as plt
-figure()
-#plot the training and validation accuracy and loss at each epoch
-loss = history.history['loss']
-val_loss = history.history['val_loss']
-epochs = range(1, len(loss) + 1)
-plt.plot(epochs, loss, 'y', label='Training loss')
-plt.plot(epochs, val_loss, 'r', label='Validation loss')
-plt.title('Training and validation loss')
-plt.xlabel('Epochs')
-plt.ylabel('Loss')
-plt.legend()
-plt.show()
-
-mse_neural, mape_neural = model.evaluate(x_test, y_test)
-print('Mean squared error from neural net: ', mse_neural)
-print('Mean absolute percentage error from neural net: ', mape_neural)
-# acc = history.history['mae']
-# val_acc = history.history['val_mae']
-# plt.plot(epochs, acc, 'y', label='Training MAE')
-# plt.plot(epochs, val_acc, 'r', label='Validation MAE')
-# plt.title('Training and validation MAE')
-# plt.xlabel('Epochs')
-# plt.ylabel('Accuracy')
-# plt.legend()
-# plt.show()
-
-#%%
-############################################
-#Predict on test data
-predictions = model.predict(x_test).flatten()
-figure()
-plt.scatter(predictions,y_test)
-lims=[0,100]
-plt.plot(lims,lims)
-plt.xlabel('predicted')
-plt.ylabel('ture values')
-plt.xlim(lims)
-plt.ylim(lims)
-# print("Predicted values are: ", predictions)
-# print("Real values are: ", y_test[:10])
-##############################################

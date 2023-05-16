@@ -260,9 +260,9 @@ def myPCA (DataFrame,verbose,nPca):
             
         ax.set_ylim(0, 1.1)
         ax.set_xticks(np.arange(pca.n_components_) + 1)
-        ax.set_title('Porcentaje de varianza explicada acumulada')
-        ax.set_xlabel('Componente principal')
-        ax.set_ylabel('Por. varianza acumulada');
+        ax.set_title('Percentage of cumulative explained variance')
+        ax.set_xlabel('PCs')
+        ax.set_ylabel('% of cumulative variance');
         plt.show()
         
     return pca_df, pro2use, prop_varianza_acum

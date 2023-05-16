@@ -8,45 +8,261 @@ Created on Wed May 10 16:58:43 2023
 
 import numpy as np
 import copy
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 from fooof import FOOOF
+from tqdm import tqdm
+from matplotlib.pyplot import plot, figure
+from sklearn.decomposition import PCA
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
+#==============================================================================
 def myReshape(array):
     [x,y]=array.shape
-    newarray=np.zeros((68,606,300))
+    newarray=np.zeros((606,300,68))
     for i,j in enumerate(np.arange(0,y,300)):
-        newarray[i,:,:]=array[:,j:j+300]
+        newarray[:,:,i]=array[:,j:j+300]
         
     return newarray
 
-#
+#==============================================================================
 def fooof(Data, freqs, inBetween):
+   Sub,PSD,ROI=Data.shape
+   columnsInBetween= [i for i, x in enumerate((freqs>=inBetween[0]) & (freqs<inBetween[1]+.5)) if x]
+   #these new colums are for the creation of the matrix of all the fooof returns
+   periodic= np.zeros((Sub,len(columnsInBetween),ROI))
+   aperiodic=np.zeros((Sub,len(columnsInBetween),ROI))
+   whitened=np.zeros((Sub,len(columnsInBetween),ROI))
+   parameters=[]
+   for roi in tqdm(range(ROI)):
+       Roi=[]
+       for sub in range(Sub):
+           fm = FOOOF(max_n_peaks=6, aperiodic_mode='fixed',min_peak_height=0.15,verbose=False)
+           fm.add_data(freqs, Data[sub,:,roi],inBetween) #freqs[0]<inBetween[:]<freqs[1]
+           fm.fit(freqs, Data[sub,:,roi], inBetween)
+           periodic[sub,:,roi]=fm._peak_fit
+           aperiodic[sub,:,roi]=fm._ap_fit
+           whitened[sub,:,roi]=fm.power_spectrum-fm._ap_fit
+           exp = fm.get_params('aperiodic_params', 'exponent')
+           offset = fm.get_params('aperiodic_params', 'offset')
+           cfs = fm.get_params('peak_params', 'CF')
+           pws = fm.get_params('peak_params', 'PW')
+           bws = fm.get_params('peak_params', 'BW')
+           Roi.append([exp,offset,cfs,pws,bws])
+       parameters.append(Roi)
+   freqsInBetween=fm.freqs
+   return periodic, aperiodic, whitened, parameters, freqsInBetween
+
+#==============================================================================
+
+def psdPlot(freqs,Data):
+    Sub,PSD,ROI=Data.shape
+    # columnsInBetween= [i for i, x in enumerate((freqs>=inBetween[0]) & (freqs<inBetween[1]+.5)) if x]
+    figure()
+    for roi in tqdm(range(ROI)):
+        mean=np.mean(Data[:,:,roi],axis=0)
+        plot(freqs,mean,alpha=.2)
+        if roi == 0:
+            Mean=mean
+            continue
+        Mean+=mean
+    Mean/=(roi+1)
+    plot(freqs,Mean,'k')
     
-    periodic= copy.copy(Data)
-    aperiodic=copy.copy(Data)
-    whitened=copy.copy(Data)
-    self.freqs=Data.freqs
-    self.columns=Data.columns
-    self.NFFT=Data.Dataframe_full.to_numpy()[:,:-1].shape[1]*2
-    parameters=[]
-    for i in tqdm(range(df.shape[0])):
-        fm = FOOOF(max_n_peaks=self.max_n_peaks, aperiodic_mode=self.fit)
-        fm.add_data(self.freqs, np.array(df.iloc[i]),inBetween)
-        fm.fit(self.freqs, np.array(df.iloc[i]), inBetween)
-        periodic.iloc[i]=fm._peak_fit
-        aperiodic.iloc[i]=fm._ap_fit
-        w=fm.power_spectrum-fm._ap_fit
-        whitened.iloc[i]=w+abs(min(w))
-        exp = fm.get_params('aperiodic_params', 'exponent')
-        offset = fm.get_params('aperiodic_params', 'offset')
-        cfs = fm.get_params('peak_params', 'CF')
-        pws = fm.get_params('peak_params', 'PW')
-        bws = fm.get_params('peak_params', 'BW')
-        parameters.append([exp,offset,cfs,pws,bws])
-        # parameters.append([cfs,pws,bws])
-    periodic['Cohort']=cohort
-    aperiodic['Cohort']=cohort
-    parameters=np.array(parameters)
-    parameters=np.concatenate((parameters,np.array([cohort]).T),axis=1)
-    band=Generate_Data.band
-    parameters=pd.DataFrame(parameters, columns=[band+'exp',band+'offset',band+'cfs',band+'pws',band+'bws','Cohort'])
-    # parameters=pd.DataFrame(parameters, columns=[band+'cfs',band+'pws',band+'bws','Cohort'])
+
+# ==============================================================================
+
+def ACP (DataFrame,verbose,scatterMatrix,nPca):
+    if verbose:
+        
+        print('----------------------')
+        print('Media de cada variable')
+        print('----------------------')
+        print(DataFrame.mean(axis=0))
+        
+        
+        print('-------------------------')
+        print('Varianza de cada variable')
+        print('-------------------------')
+        print(DataFrame.var(axis=0))
+    
+    #Etiqueta de componentes a calcular
+    # ==========================================================================
+    Etiquetas=[]
+    for i in range(len(DataFrame.keys())):
+        Etiquetas.append('PC'+str(i+1))
+    
+    # Entrenamiento modelo PCA con escalado de los datos
+    # ==============================================================================
+    pca_pipe = make_pipeline(StandardScaler(), PCA())
+    pca_pipe.fit(DataFrame)
+    
+    # Se extrae el modelo entrenado del pipeline
+    modelo_pca = pca_pipe.named_steps['pca']
+    
+    dfPca=pd.DataFrame(
+        data    = modelo_pca.components_,
+        columns = DataFrame.columns,
+        index   = Etiquetas
+    )
+    if verbose:
+        print(dfPca)
+    
+    # Heatmap componentes
+    # ==============================================================================
+    
+    componentes = modelo_pca.components_
+    if verbose:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(4, 2))
+        plt.imshow(componentes.T, cmap='viridis', aspect='auto')
+        plt.yticks(range(len(DataFrame.columns)), DataFrame.columns)
+        plt.xticks(range(len(DataFrame.columns)), np.arange(modelo_pca.n_components_) + 1)
+        plt.grid(False)
+        plt.colorbar();
+    
+    
+    # Porcentaje de varianza explicada por cada componente
+    # ==============================================================================
+    if verbose:
+        print('----------------------------------------------------')
+        print('Porcentaje de varianza explicada por cada componente')
+        print('----------------------------------------------------')
+        print(modelo_pca.explained_variance_ratio_)
+        
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6, 4))
+        ax.bar(
+            x      = np.arange(modelo_pca.n_components_) + 1,
+            height = modelo_pca.explained_variance_ratio_
+        )
+    
+        for x, y in zip(np.arange(len(DataFrame.columns)) + 1, modelo_pca.explained_variance_ratio_):
+            label = round(y, 2)
+            ax.annotate(
+                label,
+                (x,y),
+                textcoords="offset points",
+                xytext=(0,10),
+                ha='center'
+            )
+    
+        ax.set_xticks(np.arange(modelo_pca.n_components_) + 1)
+        ax.set_ylim(0, 1.1)
+        ax.set_title('Porcentaje de varianza explicada por cada componente')
+        ax.set_xlabel('Componente principal')
+        ax.set_ylabel('Por. varianza explicada');
+    
+    # Porcentaje de varianza explicada acumulada
+    # ==============================================================================
+    prop_varianza_acum = modelo_pca.explained_variance_ratio_.cumsum()
+    if verbose:
+        print('------------------------------------------')
+        print('Porcentaje de varianza explicada acumulada')
+        print('------------------------------------------')
+        print(prop_varianza_acum)
+    
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6, 4))
+        ax.plot(
+            np.arange(len(DataFrame.columns)) + 1,
+            prop_varianza_acum,
+            marker = 'o'
+        )
+    
+        for x, y in zip(np.arange(len(DataFrame.columns)) + 1, prop_varianza_acum):
+            label = round(y, 2)
+            ax.annotate(
+                label,
+                (x,y),
+                textcoords="offset points",
+                xytext=(0,10),
+                ha='center'
+            )
+            
+        ax.set_ylim(0, 1.1)
+        ax.set_xticks(np.arange(modelo_pca.n_components_) + 1)
+        ax.set_title('Porcentaje de varianza explicada acumulada')
+        ax.set_xlabel('Componente principal')
+        ax.set_ylabel('Por. varianza acumulada');
+    
+    proyecciones = pca_pipe.transform(X=DataFrame)
+    proyecciones = pd.DataFrame(
+        proyecciones,
+        columns = Etiquetas,
+        index   = DataFrame.index
+    )
+    pro2use=proyecciones.iloc[:,:nPca]
+    if verbose:
+        print(proyecciones.head())
+    
+    if scatterMatrix:
+        g=sns.pairplot(pro2use, hue="Cohort",corner=True)
+        g.map_lower(sns.kdeplot, levels=6, color=".2")
+    
+    return proyecciones,pro2use,prop_varianza_acum
+
+# =============================================================================
+def myPCA (DataFrame,verbose,nPca):
+    from sklearn import preprocessing
+    scaled_data = preprocessing.scale(DataFrame)
+    pca = PCA() # create a PCA object
+    pca.fit(scaled_data) # do the math
+    pca_data = pca.transform(scaled_data) # get PCA coordinates for scaled_data
+     
+    #########################
+    #
+    # Draw a scree plot and a PCA plot
+    #
+    #########################
+     
+    #The following code constructs the Scree plot
+    per_var = np.round(pca.explained_variance_ratio_* 100, decimals=1)
+    prop_varianza_acum = pca.explained_variance_ratio_.cumsum()
+    labels = ['PC' + str(x) for x in range(1, len(per_var)+1)]
+    
+    #the following code makes a fancy looking plot using PC1 and PC2
+    pca_df = pd.DataFrame(pca_data, columns=labels)
+    pro2use=pca_df.iloc[:,:nPca]
+    if verbose:
+        
+        plt.figure()
+        plt.bar(x=range(1,len(per_var)+1), height=per_var, tick_label=labels)
+        plt.ylabel('Percentage of Explained Variance')
+        plt.xlabel('Principal Component')
+        plt.title('Scree Plot')
+        plt.show()
+        
+        plt.figure()
+        plt.scatter(pca_df.PC1, pca_df.PC2)
+        plt.title('My PCA Graph')
+        plt.xlabel('PC1 - {0}%'.format(per_var[0]))
+        plt.ylabel('PC2 - {0}%'.format(per_var[1]))
+         
+        for sample in pca_df.index:
+            plt.annotate(sample, (pca_df.PC1.loc[sample], pca_df.PC2.loc[sample]))
+        
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6, 4))
+        ax.plot(
+            np.arange(len(labels)) + 1,
+            prop_varianza_acum,
+            marker = 'o'
+        )
+    
+        for x, y in zip(np.arange(len(labels)) + 1, prop_varianza_acum):
+            label = round(y, 2)
+            ax.annotate(
+                label,
+                (x,y),
+                textcoords="offset points",
+                xytext=(0,10),
+                ha='center'
+            )
+            
+        ax.set_ylim(0, 1.1)
+        ax.set_xticks(np.arange(pca.n_components_) + 1)
+        ax.set_title('Porcentaje de varianza explicada acumulada')
+        ax.set_xlabel('Componente principal')
+        ax.set_ylabel('Por. varianza acumulada');
+        plt.show()
+        
+    return pca_df, pro2use, prop_varianza_acum

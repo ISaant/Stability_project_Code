@@ -229,7 +229,7 @@ model = Sequential ([
 
 print(model.summary())
 model.compile(optimizer=Adam(learning_rate=0.0001),
-              loss='categorical_crossentropy',
+              loss='SparseCategoricalCrossentropy',
               metrics=[Accuracy(),Precision(),Recall()])
 
 history=model.fit(

@@ -46,6 +46,9 @@ def PltDist(demographics):
     demographics['Intervals']=RoundAge
     sns.displot(data=demographics,x='Catell_score', hue='Intervals',kind='kde', fill=True)
     plt.title('Catell Score Distribution')
+    sns.displot(data=demographics,x='additional_acer', hue='Intervals',kind='kde', fill=True)
+    plt.title('Acer Score Distribution')
+    
     # plt.figure()
     sns.relplot(data=demographics,y='Catell_score', x='age', hue='Intervals')
     plt.title('Age-Catell Regression')
@@ -65,6 +68,12 @@ def PltDist(demographics):
     plt.annotate('pvalue= '+str(pvalue),
                  (20,12),fontsize=12)
     plt.show()
+#==============================================================================
+def RemoveNan(Data,labels):
+    idx=np.argwhere(np.isnan(labels))
+    labels=np.delete(labels, idx)
+    Data=np.delete(Data, idx,axis=0)
+    return Data,labels
 #==============================================================================
 def fooof(Data, freqs, inBetween):
    Sub,PSD,ROI=Data.shape
@@ -305,21 +314,4 @@ def myPCA (DataFrame,verbose,nPca):
         
     return pca_df, pro2use, prop_varianza_acum
 
-def PlotDist(demographics):
-    import copy
-    
-    # Bar=[sum(count[unique<30])]
-    # for i in np.arange(30,90,10):
-    #     Bar.append(sum(count[np.logical_and(unique>=i, unique<i+10)]))
-    # plt.figure()
-    sns.displot(data=demographics,x='age',kde=True)
-    Age=demographics['age'].to_numpy()
-    # unique,count=np.unique(np.round(Age),return_counts=True)
-    RoundAge=copy.copy(Age)
-    RoundAge[RoundAge<20]=10
-    for i in np.arange(20,90,10):
-        RoundAge[np.logical_and(RoundAge>=i, RoundAge<i+10)]=i
-    demographics['newAge']=RoundAge
-    # plt.figure()
-    sns.displot(data=demographics,x='Catell_score', hue='newAge',kind='kde', fill=True)
-    
+ 

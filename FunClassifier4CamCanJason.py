@@ -31,7 +31,7 @@ from sklearn.metrics import accuracy_score
 from tensorflow.keras import models
 from tensorflow.keras.layers import Input, Dense, Activation, BatchNormalization, Flatten, Conv2D,Conv1D
 from tensorflow.keras.layers import AveragePooling2D, MaxPooling2D, Dropout, GlobalAveragePooling2D, MaxPooling1D
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers import Adam, SGD
 from tensorflow.keras import optimizers
 from tensorflow.keras import losses
 from tensorflow.keras import Model
@@ -52,23 +52,28 @@ def Split(Data,labels,testSize):
     return  x_train, x_test, y_train, y_test
    
 #%% Perceptron
-def Perceptron (Input0):
+def Perceptron (Input0,classification):
+    print(classification)
     tf.keras.backend.clear_session()
-    NN0 = Dense(128, activation='sigmoid')(Input0)
-    NN0 = Dense(64, activation='relu')(NN0)
-    # NN0 = Dense(32, activation='relu')(NN0)
+    NN0 = Dense(4096, activation='linear')(Input0)
+    NN0 = Dense(256, activation='sigmoid')(NN0)
     NN0 = Dense(16, activation='relu')(NN0)
     output = Dense(1, activation='linear')(NN0)
-    
+    loss='mean_squared_error',
+    metrics=['mape']
+    if classification:
+        output = Dense(7, activation='softmax')(NN0)
+        loss='categorical_crossentropy',
+        metrics=[Precision(),Recall()]
     model = Model(
         inputs=Input0,
         outputs=output)
     
     
-    
-    model.compile(optimizer=Adam(lr=.001),
-                  loss='mean_squared_error',
-                  metrics=['mape'])
+    print(model.summary())
+    model.compile(optimizer=Adam(learning_rate=.001),
+                  loss=loss,
+                  metrics=metrics)
 
     return model
 
@@ -133,23 +138,31 @@ def trainModel(model,x_train,y_train,epochs,plot):
         plt.legend()
         plt.show()
     
-def evaluateModel(model,x_test,y_test):
+def evaluateRegModel(model,x_test,y_test):
     mse_neural, mape_neural = model.evaluate(x_test, y_test)
     print('Mean squared error from neural net: ', mse_neural)
     print('Mean absolute percentage error from neural net: ', mape_neural)
     predictions = model.predict(x_test).flatten()
     return predictions
 
-#%% Perceptron
+def evaluateClassModel(model,x_test,y_test):
+    print("Evaluate on test data")
+    results = model.evaluate(x_test, y_test, batch_size=64)
+    print(results)
+
+#%% Lasso
+
+
 
 
 
 #%% Function to plot predictions
 
-def plotPredictions(predictions,y_test):
+def plotPredictionsReg(predictions,y_test):
     plt.figure()
     plt.scatter(predictions,y_test)
-    print(scipy.stats.pearsonr(predictions,y_test))
+    pearson=scipy.stats.pearsonr(predictions,y_test)
+    print(pearson)
     lims=[0,100]
     plt.plot(lims,lims)
     plt.xlabel('predicted')
@@ -157,3 +170,4 @@ def plotPredictions(predictions,y_test):
     plt.xlim(lims)
     plt.ylim(lims)
     plt.show()
+    return pearson

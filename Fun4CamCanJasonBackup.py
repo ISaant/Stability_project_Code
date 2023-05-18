@@ -30,8 +30,7 @@ def myReshape(array):
     return newarray
 
 #==============================================================================
-def PltDist(demographics):
-    
+def PlotDist(demographics):
     
     sns.displot(data=demographics,x='age',kde=True)
     plt.title('Age Histogram')
@@ -39,15 +38,14 @@ def PltDist(demographics):
     Catell=demographics['Catell_score']
     RoundAge=copy.copy(Age)
     RoundAge[RoundAge<30]=30
-    for i in np.arange(30,90,10):
-        print(i)
-        RoundAge[np.logical_and(RoundAge>i, RoundAge<=i+10)]=(i+10)
-    # RoundAge[RoundAge>80]=90
+    for i in np.arange(20,80,10):
+        RoundAge[np.logical_and(RoundAge>=i, RoundAge<i+10)]=i
+    RoundAge[RoundAge>80]=80
     demographics['Intervals']=RoundAge
     sns.displot(data=demographics,x='Catell_score', hue='Intervals',kind='kde', fill=True)
     plt.title('Catell Score Distribution')
     # plt.figure()
-    sns.relplot(data=demographics,y='Catell_score', x='age', hue='Intervals')
+    sns.relplot(data=demographics,y='Catell_score', x='age', hue='newAge')
     plt.title('Age-Catell Regression')
     idx=np.argwhere(np.isnan(Catell))
     Catell=np.delete(Catell, idx)
@@ -56,6 +54,7 @@ def PltDist(demographics):
     Age=Age.reshape(-1,1)
     linReg = linear_model.LinearRegression()
     linReg.fit(Age, Catell)
+    predLine = linReg.predict(Age)
     # Predict data of estimated models
     line_X = np.linspace(Age.min(), Age.max(),603)[:, np.newaxis]
     line_y = linReg.predict(line_X)

@@ -1,43 +1,58 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sat Apr  1 16:11:50 2023
+Created on Wed May 17 11:47:22 2023
+
 @author: isaac
 """
 
-class Student:
+def PlotDist(demographics):
+    import copy
+    from sklearn import linear_model
     
-    def __init__(self,name,age,grade):
-        self.name=name
-        self.age=age
-        self.grade=grade
-    
-    def get_grade(self):
-        return self.grade 
-    
-class Course:
-    
-    def __init__(self, name, max_student):
-        self.name = name
-        self.max_student = max_student
-        self.students=[]
-        
-    def add_student(self,student):
-        if len(self.students) < self.max_student:
-            self.students.append(student)  
-    
-    def get_average_grade(self):
-        value = 0
-        for student in self.students:
-            value += student.grade
-            
-        return value/len(self.students)
+    # Bar=[sum(count[unique<30])]
+    # for i in np.arange(30,90,10):
+    #     Bar.append(sum(count[np.logical_and(unique>=i, unique<i+10)]))
+    # plt.figure()
+    sns.displot(data=demographics,x='age',kde=True)
+    plt.title('Age Histogram')
+    Age=demographics['age'].to_numpy()
+    Catell=demographics['Catell_score']
+    # unique,count=np.unique(np.round(Age),return_counts=True)
+    RoundAge=copy.copy(Age)
+    RoundAge[RoundAge<30]=30
+    for i in np.arange(20,80,10):
+        RoundAge[np.logical_and(RoundAge>=i, RoundAge<i+10)]=i
+    RoundAge[RoundAge>80]=80
+    demographics['Intervals']=RoundAge
+    # plt.figure()
+    sns.displot(data=demographics,x='Catell_score', hue='Intervals',kind='kde', fill=True)
+    plt.title('Catell Score Distribution')
+    sns.relplot(data=demographics,y='Catell_score', x='age', hue='newAge')
+    plt.title('Age-Catell Regression')
+    idx=np.argwhere(np.isnan(Catell))
+    Catell=np.delete(Catell, idx)
+    Age=np.delete(Age, idx)
+    rsq,pvalue=scipy.stats.pearsonr(Age,Catell)
+    # print(pearson)
+    Age=Age.reshape(-1,1)
+    linReg = linear_model.LinearRegression()
+    linReg.fit(Age, Catell)
+    # r_sq = ransac.score(Age, Catell)
+    # r_sq=ransac.estimator_.coef_
+    # print(f"coefficient of determination: {r_sq}")
+    # print(f"coefficient of determination: {r_sq}")
+    predLine = linReg.predict(Age)
+    # print(scipy.stats.pearsonr(Age,Catell))
 
-s1=Student('Tim', 19, 95)
-s2=Student('Jim', 19, 75)
-s3=Student('Bill', 19, 65)
-
-course = Course('Science', 2)
-course.add_student(s1)
-course.add_student(s2)
-
-print (course.get_average_grade())
+    # Predict data of estimated models
+    line_X = np.linspace(Age.min(), Age.max(),603)[:, np.newaxis]
+    line_y = linReg.predict(line_X)
+    plt.plot(line_X,line_y,color="yellowgreen", linewidth=4, alpha=.7)
+    plt.annotate('PearsonR_sq= '+str(round(rsq,2)),
+                 (20,15),fontsize=12)
+    plt.annotate('pvalue= '+str(pvalue),
+                 (20,12),fontsize=12)
+plt.close('all')
+PlotDist(demographics)
+plt.show()

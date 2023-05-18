@@ -40,16 +40,17 @@ taskDir=np.sort(os.listdir(path2Data+mainDir[2]+'/'))
 #%% Read demografics and average Resting state using all time windows
 
 demographics=pd.read_csv(path2Data+mainDir[0])
+PltDist(demographics)
 Catell=demographics['Catell_score'].to_numpy()
 Age=demographics['age'].to_numpy()
-for e,file in enumerate(tqdm([restStateDir[0]])):
+for e,file in enumerate(tqdm(restStateDir)):
     matrix=pd.read_csv(path2Data+mainDir[1]+'/'+file,header=None)
     if e == 0:
         print (e)
-        restState=matrix
+        restStateOriginal=matrix
         continue
-    restState+=matrix
-restStateOriginal=restState
+    restStateOriginal+=matrix
+restStateOriginal=restStateOriginal
 restStateOriginal/=(e+1)
 restState = myReshape(restStateOriginal.to_numpy()) #reshape into [Subjects,PSD,ROI]
 restStateCropped = restState[:,columns,:] # Select the band-width of interest
@@ -57,6 +58,43 @@ restStateCropped = restState[:,columns,:] # Select the band-width of interest
 #%% Plot global mean and mean per ROI
 psdPlot(freqs[columns], restStateCropped)
 
+#%%
+nPca=68
+pca_df,pro2use,prop_varianza_acum=myPCA (restStateOriginal,True, nPca)
+
+
+#%% Delete nan from target drop same subject
+target=Age
+idx=np.argwhere(np.isnan(target))
+labels=np.delete(target, idx)
+Data=np.delete(pca_df, idx,axis=0)
+DataScaled=Scale(Data)
+#%%
+from FunClassifier4CamCanJason import *
+#%% Perceptron
+x_train, x_test, y_train, y_test=Split(DataScaled[:,:70],labels,.3)
+Input0=tf.keras.Input(shape=(x_train.shape[1],), )
+model=Perceptron (Input0)
+trainModel(model,x_train,y_train,300,True)
+pred=evaluateModel(model,x_test,y_test)
+plotPredictions(pred,y_test)
+    
+#%% CNN1D
+DataCNN1D=restState[0]
+DataCNN1D= Data.reshape(Data.shape[0], Data.shape[1], 1)
+x_train, x_test, y_train, y_test=Split(DataCNN1D,labels,.3)
+Input0=tf.keras.Input(shape=(x_train.shape[1],1),)
+model=CCN1D(Input0)
+trainModel(model,x_train,y_train,300,True)
+pred=evaluateModel(model,x_test,y_test)
+plotPredictions(pred,y_test)
+#%% RandomForest
+from sklearn.ensemble import RandomForestRegressor
+x_train, x_test, y_train, y_test=Split(Data[:,:70],labels,.3,False)
+model=RandomForestRegressor(n_estimators=100,random_state=30)
+model.fit(x_train, y_train)
+pred_Rf=model.predict(x_test)
+plotPredictions(pred_Rf,y_test)
 #%%  FOOOF
 
 periodic, aperiodic, whitened, parameters, freqsInBetween=fooof(restStateCropped, freqs[columns], inBetween)
@@ -105,24 +143,3 @@ for roi in  tqdm(range(ROI)):
 Var=pd.DataFrame(Var)
 sns.boxplot(Var)
 plt.ylim((0,1))
-
-#%%
-nPca=68
-pca_df,pro2use,prop_varianza_acum=myPCA (restStateOriginal,True, nPca)
-
-
-#%% Delete nan from target drop same subject
-target=Age
-idx=np.argwhere(np.isnan(target))
-labels=np.delete(target, idx)
-Data=np.delete(pca_df, idx,axis=0)
-#%% Perceptron
-keras.backend.clear_session()
-x_train, x_test, y_train, y_test=Split(Data[:,:70],labels,.3,False)
-Input0=tf.keras.Input(shape=(x_train.shape[1],), )
-model=Perceptron (Input0)
-trainModel(model,x_train,y_train,True)
-pred=evaluateModel(model,x_test,y_test)
-plotPredictions(pred,y_test)
-    
-

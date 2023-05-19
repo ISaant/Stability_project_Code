@@ -51,6 +51,8 @@ Targets=['Catell','Age','Acer']
 ACER=[]
 AGE=[]
 CATELL=[]
+Input0=tf.keras.Input(shape=(20400,), )
+modelNN=Perceptron (Input0,False)
 for i in tqdm(range(10)):
     TimeWindows=restStateDir[0:i+1]
     if i == 0:
@@ -97,12 +99,12 @@ for i in tqdm(range(10)):
     
     
         # Perceptron Regression
-            Input0=tf.keras.Input(shape=(x_train.shape[1],), )
-            model=Perceptron (Input0,False)
-            trainModel(model,x_train,y_train,300,False)
+            # Input0=tf.keras.Input(shape=(x_train.shape[1],), )
+            # model=Perceptron (Input0,False)
+            trainModel(modelNN,x_train,y_train,300,False)
             # predNN=evaluateRegModel(model,x_test,y_test)
-            predNN = model.predict(x_test).flatten()
-            NNPred=plotPredictionsReg(predNN,y_test2)
+            predNN = modelNN.predict(x_test).flatten()
+            NNPred=plotPredictionsReg(predNN,y_test)
             
         # Random Forest
             model=RandomForestRegressor(n_estimators=15,random_state=30)

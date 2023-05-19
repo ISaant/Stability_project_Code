@@ -16,17 +16,17 @@ from tensorflow.keras.metrics import Accuracy, Precision, Recall
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score
 
-# gpus = tf.config.experimental.list_physical_devices('GPU')
-# if gpus:
-#     try:
-# # Currently, memory growth needs to be the same across GPUs
-#         for gpu in gpus:
-#             tf.config.experimental.set_memory_growth(gpu, True)
-#             logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-#             print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
-#     except RuntimeError as e:
-# # Memory growth must be set before GPUs have been initialized
-#         print(e)
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+# Currently, memory growth needs to be the same across GPUs
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+    except RuntimeError as e:
+# Memory growth must be set before GPUs have been initialized
+        print(e)
 
 from tensorflow.keras import models
 from tensorflow.keras.layers import Input, Dense, Activation, BatchNormalization, Flatten, Conv2D,Conv1D
@@ -53,9 +53,9 @@ def Split(Data,labels,testSize):
    
 #%% Perceptron
 def Perceptron (Input0,classification):
-    print(classification)
+    # print(classification)
     tf.keras.backend.clear_session()
-    NN0 = Dense(4096, activation='linear')(Input0)
+    NN0 = Dense(2048, activation='linear')(Input0)
     NN0 = Dense(256, activation='sigmoid')(NN0)
     NN0 = Dense(16, activation='relu')(NN0)
     output = Dense(1, activation='linear')(NN0)
@@ -70,7 +70,7 @@ def Perceptron (Input0,classification):
         outputs=output)
     
     
-    print(model.summary())
+    # print(model.summary())
     model.compile(optimizer=Adam(learning_rate=.001),
                   loss=loss,
                   metrics=metrics)
@@ -122,7 +122,7 @@ def trainModel(model,x_train,y_train,epochs,plot):
                         validation_split=0.2, 
                         batch_size=64,
                         epochs =epochs,
-                        verbose=1)
+                        verbose=0)
     
     if plot:
         
@@ -139,15 +139,15 @@ def trainModel(model,x_train,y_train,epochs,plot):
         plt.show()
     
 def evaluateRegModel(model,x_test,y_test):
-    mse_neural, mape_neural = model.evaluate(x_test, y_test)
-    print('Mean squared error from neural net: ', mse_neural)
-    print('Mean absolute percentage error from neural net: ', mape_neural)
+    mse_neural, mape_neural = model.evaluate(x_test, y_test, verbose=0)
+    # print('Mean squared error from neural net: ', mse_neural)
+    # print('Mean absolute percentage error from neural net: ', mape_neural)
     predictions = model.predict(x_test).flatten()
     return predictions
 
 def evaluateClassModel(model,x_test,y_test):
-    print("Evaluate on test data")
-    results = model.evaluate(x_test, y_test, batch_size=64)
+    # print("Evaluate on test data")
+    results = model.evaluate(x_test, y_test, batch_size=64, verbose=0)
     print(results)
 
 #%% Lasso
@@ -162,7 +162,7 @@ def plotPredictionsReg(predictions,y_test):
     plt.figure()
     plt.scatter(predictions,y_test)
     pearson=scipy.stats.pearsonr(predictions,y_test)
-    print(pearson)
+    # print(pearson)
     lims=[0,100]
     plt.plot(lims,lims)
     plt.xlabel('predicted')
@@ -170,4 +170,4 @@ def plotPredictionsReg(predictions,y_test):
     plt.xlim(lims)
     plt.ylim(lims)
     plt.show()
-    return pearson
+    return pearson[0]

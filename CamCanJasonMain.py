@@ -19,6 +19,7 @@ from FunClassifier4CamCanJason import *
 from fooof import FOOOF
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Lasso
+from sklearn.ensemble import RandomForestRegressor
 #%% Hyperparameters
 
 #fooof 
@@ -47,12 +48,15 @@ Age=demographics['age'].to_numpy()
 Acer=demographics['additional_acer'].to_numpy()
 Targets=['Catell','Age','Acer']
 #%% average Resting state using all time windows
-for i in range(10):
+ACER=[]
+AGE=[]
+CATELL=[]
+for i in tqdm(range(10)):
     TimeWindows=restStateDir[0:i+1]
     if i == 0:
         print(i)
         TimeWindows=[restStateDir[0]]
-    for e,file in enumerate(tqdm(TimeWindows)):
+    for e,file in enumerate(TimeWindows):
         matrix=pd.read_csv(path2Data+mainDir[1]+'/'+file,header=None)
         if e == 0:
             # print (e)
@@ -68,69 +72,79 @@ for i in range(10):
 # psdPlot(freqs[columns], restStateCropped)
 
 #
-    # nPca=68
-    # pca_df,pro2use,prop_varianza_acum=myPCA (restStateOriginal,True, nPca)
+    nPca=68
+    pca_df,pro2use,prop_varianza_acum=myPCA (np.log(restStateOriginal),True, nPca)
 
 # Delete nan from target drop same subject, we will use all regions =========
     for target in Targets:
-        label=eval('tagets')
-    Data,labels=RemoveNan(np.log(restStateOriginal), Catell)
-    DataScaled=Scale(Data)
-    x_train, x_test, y_train,y_test =Split(Data,labels,.2)
-#
-# from FunClassifier4CamCanJason import *
-# Lasso
-# evaluate an lasso regression model on the dataset
-    model = Lasso(alpha=.3)
-    model.fit(x_train, y_train)
-    pred_Lasso=model.predict(x_test)
-    plotPredictionsReg(pred_Lasso,y_test)
-
-
-# Perceptron Regression
-# labelsClass=demographics['Intervals'].to_numpy()
-# labelsClass=((labelsClass-min(labelsClass))/10).astype(int)
-    x_train, x_test, y_train,y_test =Split(DataScaled,labels,.2)
-    Input0=tf.keras.Input(shape=(x_train.shape[1],), )
-    model=Perceptron (Input0,False)
-    trainModel(model,x_train,y_train,300,True)
-    pred=evaluateRegModel(model,x_test,y_test)
-    plotPredictionsReg(pred,y_test)
-
-# Perceptron Classification
-
-# from tensorflow.keras.utils import to_categorical
-    labelsClass=demographics['Intervals'].to_numpy()
-    labelsClass=((labelsClass-min(labelsClass))/10).astype(int)
-    x_train, x_test, y_train, y_test=Split(DataScaled[:,:70],labels,.3)
-    y_train=to_categorical(y_train,num_classes=7)
-    y_test=to_categorical(y_test,num_classes=7)
-    Input0=tf.keras.Input(shape=(x_train.shape[1],), )
-    model=Perceptron (Input0,True)
-    trainModel(model,x_train,y_train,300,True)
-    pred=evaluateClassModel(model,x_test,y_test)
+        label=eval(target)
+        exec(target+'Reg=[]')
+        print (target)
+        Data,labels=RemoveNan(np.log(restStateOriginal), label)
+        DataScaled=Scale(Data)
+        # Data2,labels2=RemoveNan(pca_df, label)
+        # DataScaled2=Scale(Data2)
+        for j in range(50):
+        # Data,labels=RemoveNan(np.log(restStateOriginal), label)
+            x_train, x_test, y_train,y_test =Split(DataScaled,labels,.2)
+            # x_train2, x_test2, y_train2,y_test2=Split(DataScaled2[:,:70],labels2,.2)
+    
+        # Lasso
+            model = Lasso(alpha=.3)
+            model.fit(x_train, y_train)
+            pred_Lasso=model.predict(x_test)
+            LassoPred=plotPredictionsReg(pred_Lasso,y_test)
+    
+    
+        # Perceptron Regression
+            Input0=tf.keras.Input(shape=(x_train.shape[1],), )
+            model=Perceptron (Input0,False)
+            trainModel(model,x_train,y_train,300,False)
+            # predNN=evaluateRegModel(model,x_test,y_test)
+            predNN = model.predict(x_test).flatten()
+            NNPred=plotPredictionsReg(predNN,y_test2)
+            
+        # Random Forest
+            model=RandomForestRegressor(n_estimators=15,random_state=30)
+            model.fit(x_train, y_train)
+            pred_Rf=model.predict(x_test)
+            RFPred=plotPredictionsReg(pred_Rf,y_test)
+            plt.close('all')
+            exec(target+'Reg.append([LassoPred, NNPred, RFPred ])')
+            A=np.array(eval(target+'Reg'))
+        exec(target.upper()+'.append([[np.mean(A[:,0]),np.std(A[:,0])], [np.mean(A[:,1]),np.std(A[:,1])] ,[np.mean(A[:,2]),np.std(A[:,2])]])')
+        
+    # Perceptron Classification
+    
+    # from tensorflow.keras.utils import to_categorical
+        # labelsClass=demographics['Intervals'].to_numpy()
+        # labelsClass=((labelsClass-min(labelsClass))/10).astype(int)
+        # x_train, x_test, y_train, y_test=Split(DataScaled[:,:70],labels,.3)
+        # y_train=to_categorical(y_train,num_classes=7)
+        # y_test=to_categorical(y_test,num_classes=7)
+        # Input0=tf.keras.Input(shape=(x_train.shape[1],), )
+        # model=Perceptron (Input0,True)
+        # trainModel(model,x_train,y_train,300,True)
+        # pred=evaluateClassModel(model,x_test,y_test)
 # plotPredictions(pred,y_test)
     
 # CNN1D
-DataCNN1D=restState[0]
-DataCNN1D= Data.reshape(Data.shape[0], Data.shape[1], 1)
-x_train, x_test, y_train, y_test=Split(DataCNN1D,labels,.3)
-Input0=tf.keras.Input(shape=(x_train.shape[1],1),)
-model=CCN1D(Input0)
-trainModel(model,x_train,y_train,300,True)
-pred=evaluateRegModel(model,x_test,y_test)
-plotPredictionsReg(pred,y_test)
+# DataCNN1D=restState[0]
+# DataCNN1D= Data.reshape(Data.shape[0], Data.shape[1], 1)
+# x_train, x_test, y_train, y_test=Split(DataCNN1D,labels,.3)
+# Input0=tf.keras.Input(shape=(x_train.shape[1],1),)
+# model=CCN1D(Input0)
+# trainModel(model,x_train,y_train,300,True)
+# pred=evaluateRegModel(model,x_test,y_test)
+# plotPredictionsReg(pred,y_test)
 # RandomForest
-from sklearn.ensemble import RandomForestRegressor
-x_train, x_test, y_train, y_test=Split(Data,labels,.2)
-model=RandomForestRegressor(n_estimators=20,random_state=30)
-model.fit(x_train, y_train)
-pred_Rf=model.predict(x_test)
-plotPredictionsReg(pred_Rf,y_test)
 
 
 
 
+
+
+#%%
 #  FOOOF
 
 periodic, aperiodic, whitened, parameters, freqsInBetween=fooof(restStateCropped, freqs[columns], inBetween)

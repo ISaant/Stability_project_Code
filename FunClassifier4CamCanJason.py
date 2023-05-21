@@ -28,6 +28,8 @@ if gpus:
 # Memory growth must be set before GPUs have been initialized
         print(e)
 
+import os
+os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
 from tensorflow.keras import models
 from tensorflow.keras.layers import Input, Dense, Activation, BatchNormalization, Flatten, Conv2D,Conv1D
 from tensorflow.keras.layers import AveragePooling2D, MaxPooling2D, Dropout, GlobalAveragePooling2D, MaxPooling1D

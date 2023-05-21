@@ -314,4 +314,10 @@ def myPCA (DataFrame,verbose,nPca):
         
     return pca_df, pro2use, prop_varianza_acum
 
- 
+#%%
+
+def NNMatFac(Data,nComp):
+    from sklearn.decomposition import NMF 
+    nmf = NMF(n_components=nComp,max_iter=500)
+    W = nmf.fit_transform(Data)
+    return W

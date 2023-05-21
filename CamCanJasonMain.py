@@ -11,6 +11,7 @@ import numpy as np
 import copy
 import seaborn as sns
 import tensorflow as tf
+import pickle
 from tensorflow import keras
 from tqdm import tqdm
 from matplotlib.pyplot import plot, figure
@@ -51,8 +52,8 @@ Targets=['Catell','Age','Acer']
 ACER=[]
 AGE=[]
 CATELL=[]
-Input0=tf.keras.Input(shape=(20400,), )
-modelNN=Perceptron (Input0,False)
+# Input0=tf.keras.Input(shape=(70,), )
+# modelNN=Perceptron (Input0,False)
 for i in tqdm(range(10)):
     TimeWindows=restStateDir[0:i+1]
     if i == 0:
@@ -73,49 +74,60 @@ for i in tqdm(range(10)):
 # Plot global mean and mean per ROI
 # psdPlot(freqs[columns], restStateCropped)
 
-#
-    nPca=68
-    pca_df,pro2use,prop_varianza_acum=myPCA (np.log(restStateOriginal),True, nPca)
 
+    nPca=100
+    # pca_df,pro2use,prop_varianza_acum=myPCA (np.log(restStateOriginal),True, nPca)
+    W = NNMatFac(restStateOriginal.to_numpy(),nPca)
+    
 # Delete nan from target drop same subject, we will use all regions =========
     for target in Targets:
         label=eval(target)
         exec(target+'Reg=[]')
         print (target)
-        Data,labels=RemoveNan(np.log(restStateOriginal), label)
+        # Data,labels=RemoveNan(np.log(restStateOriginal), label)
+        # DataScaled=Scale(Data)
+        # Data3,labels2=RemoveNan(pca_df, label)
+        # DataScaled3=Scale(Data3)
+        Data,labels=RemoveNan(W, label)
         DataScaled=Scale(Data)
-        # Data2,labels2=RemoveNan(pca_df, label)
-        # DataScaled2=Scale(Data2)
         for j in range(50):
         # Data,labels=RemoveNan(np.log(restStateOriginal), label)
-            x_train, x_test, y_train,y_test =Split(DataScaled,labels,.2)
-            # x_train2, x_test2, y_train2,y_test2=Split(DataScaled2[:,:70],labels2,.2)
-    
+            #x_train, x_test, y_train,y_test =Split(DataScaled,labels,.2)
+            #x_train2, x_test2, y_train2,y_test2=Split(Data2[:,:50],labels2,.2)
+            x_train, x_test, y_train,y_test=Split(DataScaled,labels,.2)
+
         # Lasso
-            model = Lasso(alpha=.3)
+            model = Lasso(alpha=.2)
             model.fit(x_train, y_train)
             pred_Lasso=model.predict(x_test)
             LassoPred=plotPredictionsReg(pred_Lasso,y_test)
     
     
         # Perceptron Regression
-            # Input0=tf.keras.Input(shape=(x_train.shape[1],), )
-            # model=Perceptron (Input0,False)
-            trainModel(modelNN,x_train,y_train,300,False)
+            Input0=tf.keras.Input(shape=(x_train.shape[1],), )
+            modelNN=Perceptron (Input0,False)
+            trainModel(modelNN,x_train,y_train,500,True)
             # predNN=evaluateRegModel(model,x_test,y_test)
             predNN = modelNN.predict(x_test).flatten()
             NNPred=plotPredictionsReg(predNN,y_test)
             
         # Random Forest
-            model=RandomForestRegressor(n_estimators=15,random_state=30)
+            model=RandomForestRegressor(n_estimators=20)
             model.fit(x_train, y_train)
             pred_Rf=model.predict(x_test)
             RFPred=plotPredictionsReg(pred_Rf,y_test)
             plt.close('all')
             exec(target+'Reg.append([LassoPred, NNPred, RFPred ])')
-            A=np.array(eval(target+'Reg'))
-        exec(target.upper()+'.append([[np.mean(A[:,0]),np.std(A[:,0])], [np.mean(A[:,1]),np.std(A[:,1])] ,[np.mean(A[:,2]),np.std(A[:,2])]])')
-        
+            
+        A=np.array(eval(target+'Reg'))
+        # exec(target.upper()+'.append([[np.mean(A[:,0]),np.std(A[:,0])], [np.mean(A[:,1]),np.std(A[:,1])] ,[np.mean(A[:,2]),np.std(A[:,2])]])')
+        exec(target.upper()+'.append(A)')
+    with open(parentPath+'/Pickle/AgePredictions.pickle', 'wb') as f:
+        pickle.dump(AGE, f)
+    with open(parentPath+'/Pickle/CatellPredictions.pickle', 'wb') as f:
+        pickle.dump(CATELL, f)
+    with open(parentPath+'/Pickle/AcerPredictions.pickle', 'wb') as f:
+        pickle.dump(ACER, f)
     # Perceptron Classification
     
     # from tensorflow.keras.utils import to_categorical

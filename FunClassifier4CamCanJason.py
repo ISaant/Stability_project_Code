@@ -50,7 +50,7 @@ def Scale(Data):
 
 #%% Split data
 def Split(Data,labels,testSize):
-    x_train, x_test, y_train, y_test = train_test_split(Data, labels, test_size=testSize, random_state=42)
+    x_train, x_test, y_train, y_test = train_test_split(Data, labels, test_size=testSize)
     return  x_train, x_test, y_train, y_test
    
 #%% Perceptron
@@ -124,7 +124,7 @@ def trainModel(model,x_train,y_train,epochs,plot):
                         validation_split=0.2, 
                         batch_size=64,
                         epochs =epochs,
-                        verbose=0)
+                        verbose=1)
     
     if plot:
         

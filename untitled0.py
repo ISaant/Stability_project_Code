@@ -1,58 +1,43 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed May 17 11:47:22 2023
+Created on Mon May 22 12:00:53 2023
 
-@author: isaac
+@author: sflores
 """
-
-def PlotDist(demographics):
-    import copy
-    from sklearn import linear_model
+import pandas as pd
+with open(parentPath+'/Pickle/AgePredictions.pickle', 'rb') as f:
+    Age=pickle.load(f)
     
-    # Bar=[sum(count[unique<30])]
-    # for i in np.arange(30,90,10):
-    #     Bar.append(sum(count[np.logical_and(unique>=i, unique<i+10)]))
-    # plt.figure()
-    sns.displot(data=demographics,x='age',kde=True)
-    plt.title('Age Histogram')
-    Age=demographics['age'].to_numpy()
-    Catell=demographics['Catell_score']
-    # unique,count=np.unique(np.round(Age),return_counts=True)
-    RoundAge=copy.copy(Age)
-    RoundAge[RoundAge<30]=30
-    for i in np.arange(20,80,10):
-        RoundAge[np.logical_and(RoundAge>=i, RoundAge<i+10)]=i
-    RoundAge[RoundAge>80]=80
-    demographics['Intervals']=RoundAge
-    # plt.figure()
-    sns.displot(data=demographics,x='Catell_score', hue='Intervals',kind='kde', fill=True)
-    plt.title('Catell Score Distribution')
-    sns.relplot(data=demographics,y='Catell_score', x='age', hue='newAge')
-    plt.title('Age-Catell Regression')
-    idx=np.argwhere(np.isnan(Catell))
-    Catell=np.delete(Catell, idx)
-    Age=np.delete(Age, idx)
-    rsq,pvalue=scipy.stats.pearsonr(Age,Catell)
-    # print(pearson)
-    Age=Age.reshape(-1,1)
-    linReg = linear_model.LinearRegression()
-    linReg.fit(Age, Catell)
-    # r_sq = ransac.score(Age, Catell)
-    # r_sq=ransac.estimator_.coef_
-    # print(f"coefficient of determination: {r_sq}")
-    # print(f"coefficient of determination: {r_sq}")
-    predLine = linReg.predict(Age)
-    # print(scipy.stats.pearsonr(Age,Catell))
+with open(parentPath+'/Pickle/CatellPredictions.pickle', 'rb') as f:
+    Catell=pickle.load(f)
+    
+with open(parentPath+'/Pickle/AcerPredictions.pickle', 'rb') as f:
+    Acer=pickle.load(f)
+    
+dfAge=pd.DataFrame(columns=['Corr','Algorithm','Iteration'])
+dfCatell=pd.DataFrame(columns=['Corr','Algorithm','Iteration'])
+dfAcer=pd.DataFrame(columns=['Corr','Algorithm','Iteration'])
+Targets=['Age','Catell','Acer']
+#%%
+for target in Targets:
+    test=eval(target)    
+    for i in range(10):
+        results=test[i]
+        corr=np.reshape(results,(150,),order='F')
+        iteration=np.ones(150)+i
+        algorithm=np.reshape([['Lasso']*50,['Perceptron']*50,['RandomForest']*50],(150,)).astype(str)
+        df=pd.DataFrame({'Corr':corr,'Algorithm':algorithm,'Num_of_Windows [30s]':iteration})
+        exec('df'+target+'=pd.concat([df'+target+',df],ignore_index=True)')
 
-    # Predict data of estimated models
-    line_X = np.linspace(Age.min(), Age.max(),603)[:, np.newaxis]
-    line_y = linReg.predict(line_X)
-    plt.plot(line_X,line_y,color="yellowgreen", linewidth=4, alpha=.7)
-    plt.annotate('PearsonR_sq= '+str(round(rsq,2)),
-                 (20,15),fontsize=12)
-    plt.annotate('pvalue= '+str(pvalue),
-                 (20,12),fontsize=12)
-plt.close('all')
-PlotDist(demographics)
-plt.show()
+#%%
+# plt.close('all')
+def plotLine(df,ylim,title):
+    plt.figure()
+    sns.lineplot(data=df,x='Num_of_Windows [30s]',y='Corr',hue='Algorithm', markers=True, palette="flare")
+    plt.ylim(ylim)
+    plt.title(title)
+
+plotLine(dfAge,[0,.85],'Age regression')
+plotLine(dfCatell,[0,.85], 'Catell Score regression')
+plotLine(dfAcer,[0,.85], 'Acer Score regression')

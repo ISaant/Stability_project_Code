@@ -30,6 +30,18 @@ def myReshape(array):
     return newarray
 
 #==============================================================================
+
+def RestoreShape(Data):
+    if len(Data.shape)>2:
+        [x,y,z]=Data.shape
+        newarray=np.zeros((x,y*z))
+        for i,j in enumerate(np.arange(0,y*z,y)):
+            newarray[:,j:j+y]=Data[:,:,i]
+        return newarray
+    else:
+        return Data
+
+#==============================================================================
 def PltDist(demographics):
     
     
@@ -74,6 +86,8 @@ def RemoveNan(Data,labels):
     labels=np.delete(labels, idx)
     Data=np.delete(Data, idx,axis=0)
     return Data,labels
+
+# def RandomizeFeaturesInROI(Data):
 #==============================================================================
 def fooof(Data, freqs, inBetween):
    Sub,PSD,ROI=Data.shape

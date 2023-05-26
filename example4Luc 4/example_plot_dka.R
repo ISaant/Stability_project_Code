@@ -1,4 +1,4 @@
-setwd('/export03/data/Santiago/Stability_project_Code/example4Luc 4/')
+setwd('~/Documents/Doctorado CIC/Internship/Sylvain/Stability-project/Stability_project_Code/example4Luc 4/')
 cbbPalette= c("#DBF132", "#15A705",'#4F89E0',"#D81B99",'#4D3D87','#115D80', '#FF0000')
 
 df=read.csv('./dka_data.csv', header = TRUE, stringsAsFactors = FALSE)
@@ -16,16 +16,15 @@ df$YEO_con= as.numeric(plyr::mapvalues(df$YEO, unique(df$YEO), 1:7))
 ggplot(df) +
   geom_brain(atlas = dk, 
              position = position_brain(hemi ~ side),
-             aes(fill = alpha)) + scale_fill_manual(values=cbbPalette) + scale_colour_manual(values=cbbPalette) +
+             aes(fill = 'decoding_corr')) + scale_fill_manual(values=cbbPalette) + scale_colour_manual(values=cbbPalette) +
   theme_void() 
 
-ggsave('~/export03/data/Santiago/Stability_project_figures/decoding_of_age_80_20.pdf', device = "pdf")
+ggsave('~/Documents/Doctorado CIC/Internship/Sylvain/Stability-project/Stability_project_Code/example4Luc 4/decoding_of_age_80_20.pdf', device = "pdf")
 
 
 ggplot(df, aes(YEO, decoding_corr, fill=YEO)) +
   ggdist::stat_halfeye(adjust = .5, width = .1, .width = 0, justification = -.5, alpha=0.5, point_alpha= 0) +
-  geom_boxplot(width = .3, outlier.shape = NA, colour= '#888888
-') + ggpubr::theme_classic2() + scale_fill_manual(values=cbbPalette) #+ facet_wrap(~ ind)
+  geom_boxplot(width = .3, outlier.shape = NA, colour= '#888888') + ggpubr::theme_classic2() + scale_fill_manual(values=cbbPalette) #+ facet_wrap(~ ind)
 
 # df=read.csv('dka_data.csv', header = TRUE, stringsAsFactors = FALSE)
 # colnames(df)[2]='decoding corr'

@@ -49,8 +49,8 @@ def Scale(Data):
     return Data
 
 #%% Split data
-def Split(Data,labels,testSize):
-    x_train, x_test, y_train, y_test = train_test_split(Data, labels, test_size=testSize)
+def Split(Data,labels,testSize,seed=[]):
+    x_train, x_test, y_train, y_test = train_test_split(Data, labels, test_size=testSize,random_state=seed)
     return  x_train, x_test, y_train, y_test
    
 #%% Perceptron

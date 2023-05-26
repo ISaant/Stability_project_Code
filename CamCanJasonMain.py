@@ -64,6 +64,7 @@ for e,file in enumerate(tqdm(restStateDir)):
     if e == 0:
         # print (e)
         restStateOriginal=matrix
+        FirstWindow=matrix
         continue
     restStateOriginal+=matrix
 restStateOriginal=restStateOriginal
@@ -71,6 +72,8 @@ restStateOriginal/=(e+1)
 restState = myReshape(restStateOriginal.to_numpy()) #reshape into [Subjects,PSD,ROI]
 restStateCropped = restState[:,columns,:] # Select the band-width of interest
 
+FirstWindow = myReshape(FirstWindow.to_numpy())
+FirstWindow = FirstWindow[:,columns,:]
 #%% NNMF instead of PCA
 nPca=100
 # pca_df,pro2use,prop_varianza_acum=myPCA (np.log(restStateOriginal),True, nPca)
@@ -184,7 +187,25 @@ with open(current_path+'/Pickle/MeanDiff_AllbutOne.pickle', 'wb') as f:
 with open(current_path+'/Pickle/MeanDiff_JustOne.pickle', 'wb') as f:
     pickle.dump(MeanDiffJustOne2, f)
 
+#%%
+FirstWindowCorr=0
+DataTrain=RestoreShape(np.log(restStateCropped))
+DataTrain,labels=RemoveNan(DataTrain, Age)
+DataTest=RestoreShape(np.log(FirstWindow))
+DataTest,labels=RemoveNan(DataTest, Age)
+itr=100
+for i in tqdm(range(itr)):
+    x_train, _, y_train,_=Split(DataTrain,labels,.2,seed=i)
+    _, x_test, _,y_test=Split(DataTest,labels,.2,seed=i)
 
+    # DataScaled=Scale(Data)
+    # x_train, x_test, y_train,y_test=Split(DataScaled,labels,.2)
+    model = Lasso(alpha=.2)
+    model.fit(x_train, y_train)
+    pred_Lasso=model.predict(x_test)
+    lassoPred=scipy.stats.pearsonr(pred_Lasso,y_test)[0]
+    FirstWindowCorr+=lassoPred
+FirstWindowCorr/=itr
 #%% Dictionary For ggseg
 
 

@@ -48,7 +48,8 @@ def PltDist(demographics):
     sns.displot(data=demographics,x='age',kde=True)
     plt.title('Age Histogram')
     Age=demographics['age'].to_numpy()
-    Catell=demographics['Catell_score']
+    Acer=demographics['additional_acer'].to_numpy()
+    Catell=demographics['Catell_score'].to_numpy()
     RoundAge=copy.copy(Age)
     RoundAge[RoundAge<30]=30
     for i in np.arange(30,90,10):
@@ -60,6 +61,7 @@ def PltDist(demographics):
     plt.title('Catell Score Distribution')
     sns.displot(data=demographics,x='additional_acer', hue='Intervals',kind='kde', fill=True)
     plt.title('Acer Score Distribution')
+
     
     # plt.figure()
     sns.relplot(data=demographics,y='Catell_score', x='age', hue='Intervals')
@@ -67,6 +69,11 @@ def PltDist(demographics):
     idx=np.argwhere(np.isnan(Catell))
     Catell=np.delete(Catell, idx)
     Age=np.delete(Age, idx)
+    Acer=np.delete(Acer, idx)
+    idx=np.argwhere(np.isnan(Acer))
+    Catell=np.delete(Catell, idx)
+    Age=np.delete(Age, idx)
+    Acer=np.delete(Acer, idx)
     rsq,pvalue=scipy.stats.pearsonr(Age,Catell)
     Age=Age.reshape(-1,1)
     linReg = linear_model.LinearRegression()
@@ -79,6 +86,39 @@ def PltDist(demographics):
                  (20,15),fontsize=12)
     plt.annotate('pvalue= '+str(pvalue),
                  (20,12),fontsize=12)
+    
+    sns.relplot(data=demographics,x='Catell_score', y='additional_acer', hue='Intervals')
+    plt.title('Catell-Acer Regression')
+    rsq,pvalue=scipy.stats.pearsonr(Catell,Acer)
+    Catell=Catell.reshape(-1,1)
+    # Acer=Acer.reshape(-1,1)
+    linReg = linear_model.LinearRegression()
+    linReg.fit(Catell,Acer)
+    # Predict data of estimated models
+    line_X = np.linspace(Catell.min(), Catell.max(),603)[:, np.newaxis]
+    line_y = linReg.predict(line_X)
+    plt.plot(line_X,line_y,color="yellowgreen", linewidth=4, alpha=.7)
+    plt.annotate('PearsonR_sq= '+str(round(rsq,2)),
+                 (20,17),fontsize=12)
+    plt.annotate('pvalue= '+str(pvalue),
+                 (20,10),fontsize=12)
+    
+    sns.relplot(data=demographics,x='age', y='additional_acer', hue='Intervals')
+    plt.title('Age-Acer Regression')
+    Age=Age.reshape(Age.shape[0],)
+    rsq,pvalue=scipy.stats.pearsonr(Age,Acer)
+    Age=Age.reshape(-1,1)
+    linReg = linear_model.LinearRegression()
+    linReg.fit(Age,Acer)
+    # Predict data of estimated models
+    line_X = np.linspace(Age.min(), Age.max(),603)[:, np.newaxis]
+    line_y = linReg.predict(line_X)
+    plt.plot(line_X,line_y,color="yellowgreen", linewidth=4, alpha=.7)
+    plt.annotate('PearsonR_sq= '+str(round(rsq,2)),
+                 (20,77),fontsize=12)
+    plt.annotate('pvalue= '+str(pvalue),
+                 (20,70),fontsize=12)
+    plt.ylim([60,110])
     plt.show()
 #==============================================================================
 def RemoveNan(Data,labels):

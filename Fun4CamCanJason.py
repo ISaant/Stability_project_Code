@@ -375,3 +375,108 @@ def NNMatFac(Data,nComp):
     nmf = NMF(n_components=nComp,max_iter=500)
     W = nmf.fit_transform(Data)
     return W
+
+#%%
+
+def MeanCorrMatrix(Data,current_path):
+    '''
+    
+
+    Parameters
+    ----------
+    Data : 3D Array or Dataframe
+        [subject,psd,roi].
+
+    Returns
+    -------
+    None.
+
+    '''
+
+    ROI=['bankssts_left',
+    'bankssts_right',
+    'caudalanteriorcingulate_left',
+    'caudalanteriorcingulate_right',
+    'caudalmiddlefrontal_left',
+    'caudalmiddlefrontal_right',
+    'cuneus_left',
+    'cuneus_right',
+    'entorhinal_left',
+    'entorhinal_right',
+    'frontalpole_left',
+    'frontalpole_right',
+    'fusiform_left',
+    'fusiform_right',
+    'inferiorparietal_left',
+    'inferiorparietal_right',
+    'inferiortemporal_left',
+    'inferiortemporal_right',
+    'insula_left',
+    'insula_right',
+    'isthmuscingulate_left',
+    'isthmuscingulate_right',
+    'lateraloccipital_left',
+    'lateraloccipital_right',
+    'lateralorbitofrontal_left',
+    'lateralorbitofrontal_right',
+    'lingual_left',
+    'lingual_right',
+    'medialorbitofrontal_left',
+    'medialorbitofrontal_right',
+    'middletemporal_left',
+    'middletemporal_right',
+    'paracentral_left',
+    'paracentral_right',
+    'parahippocampal_left',
+    'parahippocampal_right',
+    'parsopercularis_left',
+    'parsopercularis_right',
+    'parsorbitalis_left',
+    'parsorbitalis_right',
+    'parstriangularis_left',
+    'parstriangularis_right',
+    'pericalcarine_left',
+    'pericalcarine_right',
+    'postcentral_left',
+    'postcentral_right',
+    'posteriorcingulate_left',
+    'posteriorcingulate_right',
+    'precentral_left',
+    'precentral_right',
+    'precuneus_left',
+    'precuneus_right',
+    'rostralanteriorcingulate_left',
+    'rostralanteriorcingulate_right',
+    'rostralmiddlefrontal_left',
+    'rostralmiddlefrontal_right',
+    'superiorfrontal_left',
+    'superiorfrontal_right',
+    'superiorparietal_left',
+    'superiorparietal_right',
+    'superiortemporal_left',
+    'superiortemporal_right',
+    'supramarginal_left',
+    'supramarginal_right',
+    'temporalpole_left',
+    'temporalpole_right',
+    'transversetemporal_left',
+    'transversetemporal_right']
+    
+    dka=pd.read_csv(current_path+'/example4Luc 4/dka_data.csv')
+    corr_matrix=[]
+    for sub in range(Data.shape[0]):
+        df=pd.DataFrame(Data[sub,:,:], columns=ROI)
+        if sub == 0:
+            corr_matrix = df.corr()
+            continue
+        corr_matrix+=df.corr()
+    corr_matrix/=sub+1
+    plt.figure()
+    sns.heatmap(corr_matrix)
+    plt.title('Correlation Matrix [0:50] Hz')
+    plt.show()
+    
+    for col in corr_matrix.columns:
+        dka[col]=np.array(corr_matrix[col])
+        
+    dka.to_csv(current_path+'/example4Luc 4/dka_correlation.csv',index=False)

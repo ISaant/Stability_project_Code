@@ -51,13 +51,7 @@ Age=demographics['age'].to_numpy()
 Acer=demographics['additional_acer'].to_numpy()
 Targets=['Catell','Age','Acer']
 
-#%% Plot mean rho based on the amount of time provided to the system as input
-# Uncoment if you want to overwrite the picke files to plot the regresions
-# TestAlgorithmsRegression(restStateDir,path2Data,mainDir,columns,)
-# REMEMBER THAT THE exec() DOESNT WORK INSIDE FUNCTIONS! CHAGE THE CODE BEFORE USING IT AGAIN (not warking as a function)
 
-#plot the results
-df=RegPlot(parentPath)
 #%% average Resting state using all time windows
 for e,file in enumerate(tqdm(restStateDir)):
     matrix=pd.read_csv(path2Data+mainDir[1]+'/'+file,header=None)
@@ -91,6 +85,14 @@ psdPlot(freqsInBetween, periodic)
 psdPlot(freqsInBetween, aperiodic)
 psdPlot(freqsInBetween, whitened)
 
+#%% Plot mean rho based on the amount of time provided to the system as input
+# Uncoment if you want to overwrite the picke files to plot the regresions
+# TestAlgorithmsRegression(restStateDir,path2Data,mainDir,columns,)
+# REMEMBER THAT THE exec() DOESNT WORK INSIDE FUNCTIONS! CHAGE THE CODE BEFORE USING IT AGAIN (not warking as a function)
+
+#plot the results
+df=RegPlot(current_path)
+MeanCorrMatrix(Data,current_path)
 #%% Test Lasso with different "Data"
 Data2Test=[restStateOriginal.to_numpy(),
            np.log(restStateOriginal.to_numpy()),
@@ -122,7 +124,7 @@ for testName,test in zip(TestName,Test):
         # plt.ylabel('Predicted Score')
         # plt.annotate('r_sq='+str(round(LassoPred*100,4)), [20,80], fontsize=12)
         # plt.title('Lasso Regression on Age')
-        #%%
+        
 sns.set(font_scale=1)
 sns.boxplot(TheDf,x='Test',y='Corr',hue='Data',palette="rocket_r").set(title='Lasso performance based on Dataset Processing')#gist_earth_r, mako_r, rocket_r
 plt.xticks(rotation=15, ha='right')
@@ -187,7 +189,7 @@ with open(current_path+'/Pickle/MeanDiff_AllbutOne.pickle', 'wb') as f:
 with open(current_path+'/Pickle/MeanDiff_JustOne.pickle', 'wb') as f:
     pickle.dump(MeanDiffJustOne2, f)
 
-#%%
+#%% Train on all windows, test just on first window
 FirstWindowCorr=0
 DataTrain=RestoreShape(np.log(restStateCropped))
 DataTrain,labels=RemoveNan(DataTrain, Age)
@@ -206,6 +208,8 @@ for i in tqdm(range(itr)):
     lassoPred=scipy.stats.pearsonr(pred_Lasso,y_test)[0]
     FirstWindowCorr+=lassoPred
 FirstWindowCorr/=itr
+
+
 #%% Dictionary For ggseg
 
 

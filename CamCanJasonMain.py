@@ -92,7 +92,7 @@ psdPlot(freqsInBetween, whitened)
 
 #plot the results
 df=RegPlot(current_path)
-MeanCorrMatrix(Data,current_path)
+MeanCorrMatrix(restStateCropped,current_path)
 #%% Test Lasso with different "Data"
 Data2Test=[restStateOriginal.to_numpy(),
            np.log(restStateOriginal.to_numpy()),
@@ -208,6 +208,64 @@ for i in tqdm(range(itr)):
     lassoPred=scipy.stats.pearsonr(pred_Lasso,y_test)[0]
     FirstWindowCorr+=lassoPred
 FirstWindowCorr/=itr
+
+#%% Training based on frequency bins
+
+corrPerBin=[]
+itr=500
+CleanData,labels=RemoveNan(restStateCropped, Catell)
+for PSDbin in tqdm(np.arange(2,CleanData.shape[1])):
+    corr=[]
+    Data=RestoreShape(np.log(CleanData[:,PSDbin,:]))
+    for i in range(itr):
+        x_train, x_test, y_train,y_test=Split(Data,labels,.2)
+        # DataScaled=Scale(Data)
+        # x_train, x_test, y_train,y_test=Split(DataScaled,labels,.2)
+        model = Lasso(alpha=.2)
+        model.fit(x_train, y_train)
+        pred_Lasso=model.predict(x_test)
+        lassoPred=scipy.stats.pearsonr(pred_Lasso,y_test)[0]
+        corr.append(lassoPred)
+    corrPerBin.append(corr)
+corrPerBin=np.array(corrPerBin)
+fig,ax=plt.subplots()
+GlobalMeanPSD=np.mean(np.mean(restStateCropped,axis=2),axis=0)
+ax.plot(GlobalMeanPSD[2:]/max(GlobalMeanPSD[2:]), 'k', linewidth=2)
+plt.legend(['Global Mean PSD'])
+corrPerBinDf=pd.DataFrame(corrPerBin.T,columns=freqs[2:100])
+sns.set(font_scale=1)
+sns.boxplot(corrPerBinDf, ax=ax).set(title='Lasso performance per frequency bin - Catell')#gist_earth_r, mako_r, rocket_r
+plt.xticks(rotation=90, ha='right')
+
+#%% Training based on frequency windows: 5 Hz w/ .5 Hz steps
+
+corrPerBin=[]
+itr=100
+CleanData,labels=RemoveNan(restStateCropped, Age)
+windowSize=int(5*(1/.5)) #5Hz windows * freq bin size in Hz/s = 10 datapoints,
+step= int(.5*(1/.5)) #.5Hz step * freq bin size in Hz/s = 1 datapoint step
+for PSDwinStart in tqdm(np.arange(0,CleanData.shape[1]-windowSize,step)):
+    corr=[]
+    Data=RestoreShape(np.log(CleanData[:,PSDwinStart:PSDwinStart+windowSize,:]))
+    for i in range(itr):
+        x_train, x_test, y_train,y_test=Split(Data,labels,.2)
+        # DataScaled=Scale(Data)
+        # x_train, x_test, y_train,y_test=Split(DataScaled,labels,.2)
+        model = Lasso(alpha=.2)
+        model.fit(x_train, y_train)
+        pred_Lasso=model.predict(x_test)
+        lassoPred=scipy.stats.pearsonr(pred_Lasso,y_test)[0]
+        corr.append(lassoPred)
+    corrPerBin.append(corr)
+corrPerBin=np.array(corrPerBin)
+fig,ax=plt.subplots()
+GlobalMeanPSD=np.mean(np.mean(restStateCropped,axis=2),axis=0)
+ax.plot(GlobalMeanPSD[int(windowSize/2):100-int(windowSize/2)]/max(GlobalMeanPSD[int(windowSize/2):100-int(windowSize/2)]), 'k', linewidth=2)
+plt.legend(['Global Mean PSD'])
+corrPerBinDf=pd.DataFrame(corrPerBin.T,columns=freqs[int(windowSize/2):100-int(windowSize/2)])
+sns.set(font_scale=1)
+sns.boxplot(corrPerBinDf, ax=ax).set(title='Lasso performance per frequency window [ 5 Hz w/ .5 Hz steps]  - Age')#gist_earth_r, mako_r, rocket_r
+plt.xticks(rotation=90, ha='right')
 
 
 #%% Dictionary For ggseg

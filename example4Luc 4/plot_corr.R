@@ -6,7 +6,7 @@ setwd('~/Documents/Doctorado CIC/Internship/Sylvain/Stability-project/Stability_
 
 cbbPalette= c("#4f89e0", "#f5ec6c",'#156605',"#76D7C4", '#4d3d87',   "#f5ec6c",'#D81B99')
 
-df=read.csv('./dka_data.csv', header = TRUE, stringsAsFactors = FALSE)
+df=read.csv('./dka_correlation.csv', header = TRUE, stringsAsFactors = FALSE)
 colnames(df)[1]='region'
 
 df$hemi =''
@@ -21,7 +21,7 @@ df$YEO_con= as.numeric(plyr::mapvalues(df$YEO, unique(df$YEO), 1:7))
 ggplot(df) +
   geom_brain(atlas = dk, 
              position = position_brain(hemi ~ side),
-             aes(fill = `decoding corr`)) + viridis::scale_fill_viridis(option='magma') + 
+             aes(fill = `isthmuscingulate_left`)) + viridis::scale_fill_viridis(option='magma') + 
   theme_void() 
 
-ggsave('~/Documents/Doctorado CIC/Internship/Sylvain/Stability-project/Stability_project_Code/example4Luc 4/Santiago_decoding_corr.pdf', device = "pdf")
+ggsave('~/Documents/Doctorado CIC/Internship/Sylvain/Stability-project/Stability_project_Code/example4Luc 4/IsthmusCingulate_left_corr.pdf', device = "pdf")

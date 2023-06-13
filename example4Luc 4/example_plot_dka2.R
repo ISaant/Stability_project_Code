@@ -1,4 +1,9 @@
+library(ggseg)
+library(ggplot2)
+
+
 setwd('~/Documents/Doctorado CIC/Internship/Sylvain/Stability-project/Stability_project_Code/example4Luc 4/')
+
 cbbPalette= c("#4f89e0", "#f5ec6c",'#156605',"#76D7C4", '#4d3d87',   "#f5ec6c",'#D81B99')
 
 df=read.csv('./dka_data.csv', header = TRUE, stringsAsFactors = FALSE)

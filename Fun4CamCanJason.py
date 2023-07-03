@@ -44,7 +44,6 @@ def RestoreShape(Data):
 #==============================================================================
 def PltDist(demographics):
     
-    
     sns.displot(data=demographics,x='age',kde=True)
     plt.title('Age Histogram')
     Age=demographics['age'].to_numpy()
@@ -62,7 +61,7 @@ def PltDist(demographics):
     sns.displot(data=demographics,x='additional_acer', hue='Intervals',kind='kde', fill=True)
     plt.title('Acer Score Distribution')
 
-    
+
     # plt.figure()
     sns.relplot(data=demographics,y='Catell_score', x='age', hue='Intervals')
     plt.title('Age-Catell Regression')
@@ -79,14 +78,14 @@ def PltDist(demographics):
     linReg = linear_model.LinearRegression()
     linReg.fit(Age, Catell)
     # Predict data of estimated models
-    line_X = np.linspace(Age.min(), Age.max(),603)[:, np.newaxis]
-    line_y = linReg.predict(line_X)
-    plt.plot(line_X,line_y,color="yellowgreen", linewidth=4, alpha=.7)
+    line_age = line_X = np.round(np.arange(Age.min()-5, Age.max()+5,.01),2)[:, np.newaxis]
+    line_predCatell = linReg.predict(line_X)
+    plt.plot(line_age,line_predCatell,color="yellowgreen", linewidth=4, alpha=.7)
     plt.annotate('PearsonR_sq= '+str(round(rsq,2)),
                  (20,15),fontsize=12)
     plt.annotate('pvalue= '+str(pvalue),
                  (20,12),fontsize=12)
-    
+
     sns.relplot(data=demographics,x='Catell_score', y='additional_acer', hue='Intervals')
     plt.title('Catell-Acer Regression')
     rsq,pvalue=scipy.stats.pearsonr(Catell,Acer)
@@ -102,7 +101,7 @@ def PltDist(demographics):
                  (20,17),fontsize=12)
     plt.annotate('pvalue= '+str(pvalue),
                  (20,10),fontsize=12)
-    
+
     sns.relplot(data=demographics,x='age', y='additional_acer', hue='Intervals')
     plt.title('Age-Acer Regression')
     Age=Age.reshape(Age.shape[0],)
@@ -120,6 +119,7 @@ def PltDist(demographics):
                  (20,70),fontsize=12)
     plt.ylim([60,110])
     plt.show()
+    return line_age, line_predCatell
 #==============================================================================
 def RemoveNan(Data,labels):
     idx=np.argwhere(np.isnan(labels))
@@ -164,13 +164,16 @@ def psdPlot(freqs,Data):
     figure()
     for roi in tqdm(range(ROI)):
         mean=np.mean(Data[:,:,roi],axis=0)
-        plot(freqs,mean,alpha=.2)
+        plot(np.log(freqs),np.log(mean),alpha=.2)
         if roi == 0:
             Mean=mean
             continue
         Mean+=mean
     Mean/=(roi+1)
-    plot(freqs,Mean,'k')
+    plot(np.log(freqs),np.log(Mean),'k')
+    plt.title('Global PSD')
+    plt.xlabel('log(Frequencies [Hz])')
+    plt.ylabel('log(Power)')
     
 
 # ==============================================================================
@@ -480,3 +483,59 @@ def MeanCorrMatrix(Data,current_path):
         dka[col]=np.array(corr_matrix[col])
         
     dka.to_csv(current_path+'/example4Luc 4/dka_correlation.csv',index=False)
+    
+#%% 
+def PlotErrorvsAge(meanPred,meanError,labels,Age,Catell_noNan,ExpectedCatell):
+    RoundAge=copy.copy(labels.astype(str))
+    RoundAge[labels<45]='18-45'
+    RoundAge[labels>=65]='65+'
+    RoundAge[np.logical_and(labels>=45, labels<65)]='45-65'
+    resCatell=Catell_noNan-ExpectedCatell
+    dfError=pd.DataFrame({'Mean Error': meanError,
+                          'Catell': Catell_noNan,
+                          'ECatell':ExpectedCatell,
+                          'Catell Residuals':resCatell,
+                          'Age': labels,
+                          'Intervals':RoundAge})
+    sns.relplot(data=dfError,y='Catell Residuals',x='Mean Error',hue='Age',palette="rocket")
+    rsq,pvalue=scipy.stats.pearsonr(meanError,resCatell)
+    mE=meanError.reshape(-1,1)
+    linReg = linear_model.LinearRegression()
+    linReg.fit(mE, resCatell)
+    # Predict data of estimated models
+    line_X = np.linspace(mE.min(), mE.max(),603)[:, np.newaxis]
+    line_y = linReg.predict(line_X)
+    plt.plot(line_X,line_y,color="yellowgreen", linewidth=4, alpha=.7)
+    plt.annotate('PearsonR= '+str(round(rsq,2)),
+                 (10,10),fontsize=12)
+    # plt.annotate('pvalue= '+str(pvalue),
+    #              (20,12),fontsize=12)
+
+    plt.title('Error on Predicted Age vs Catell Score residuals')
+    plt.figure()
+    sns.boxplot(data=dfError,y='Mean Error',x='Intervals',palette="rocket")
+    plt.title('Boxplot Error Bias per Group')
+
+    df=pd.DataFrame({'Mean Pred Age': meanPred,
+                     'Age': labels})
+    sns.relplot(data=df,x='Age',y='Mean Pred Age',palette="rocket")
+    rsq,pvalue=scipy.stats.pearsonr(labels,meanPred)
+    label=labels.reshape(-1,1)
+    mp=meanPred.reshape(-1,1)
+    linReg = linear_model.LinearRegression()
+    linReg.fit(label,meanPred)
+    linRegOnPred = linear_model.LinearRegression()
+    linRegOnPred.fit(mp,meanPred)
+    # Predict data of estimated models
+    line_X = np.linspace(label.min(), label.max(),603)[:, np.newaxis]
+    line_y = linReg.predict(line_X)
+    line_y2=linRegOnPred.predict(line_X)
+    plt.plot(line_X,line_y,color="yellowgreen", linewidth=4, alpha=.7, label='Pred vs Real Reg')
+    plt.plot(line_X,line_y2,color="red", linewidth=4, alpha=.7, label='Linear Reg')
+    plt.legend()
+    # plt.annotate('PearsonR= '+str(round(rsq,2)),
+    #              (50,30),fontsize=12)
+    # plt.annotate('pvalue= '+str(pvalue),
+    #              (20,12),fontsize=12)
+
+    plt.title('Mean predicted Age vs Chronological Age')

@@ -12,6 +12,7 @@ import copy
 import seaborn as sns
 import tensorflow as tf
 import pickle
+import math
 from tensorflow import keras
 from tqdm import tqdm
 from matplotlib.pyplot import plot, figure
@@ -19,7 +20,7 @@ from Fun4CamCanJason import *
 from FunClassifier4CamCanJason import *
 from fooof import FOOOF
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import Lasso
+from sklearn.linear_model import Lasso, LineaRegression
 from sklearn.ensemble import RandomForestRegressor
 from TAR import TestAlgorithmsRegression
 from RegressionsResultPlot import RegPlot
@@ -32,6 +33,7 @@ inBetween=[1,40]
 freqs=np.arange(0,150,.5)
 alfaBetaFreqs=[0,50]
 columns= [i for i, x in enumerate((freqs>=alfaBetaFreqs[0]) & (freqs<alfaBetaFreqs[1])) if x]
+freqsCropped=freqs[columns]
 #columns is used to select the region of the PSD we are interested in
 
 #%% Directories
@@ -45,7 +47,7 @@ taskDir=np.sort(os.listdir(path2Data+mainDir[2]+'/'))
 #%% Read demografics 
 
 demographics=pd.read_csv(path2Data+mainDir[0])
-PltDist(demographics)
+lineAge,ECatell=PltDist(demographics)
 Catell=demographics['Catell_score'].to_numpy()
 Age=demographics['age'].to_numpy()
 Acer=demographics['additional_acer'].to_numpy()
@@ -80,7 +82,8 @@ W = NNMatFac(restStateOriginal.to_numpy(),nPca)
 periodic, aperiodic, whiten, parameters, freqsInBetween=fooof(restStateCropped, freqs[columns], inBetween)
 
 
-# Plot global mean and mean per ROI after FOOOF
+#%% Plot global mean and mean per ROI after FOOOF
+psdPlot(freqs, restState)
 psdPlot(freqsInBetween, periodic)
 psdPlot(freqsInBetween, aperiodic)
 psdPlot(freqsInBetween, whitened)
@@ -91,8 +94,11 @@ psdPlot(freqsInBetween, whitened)
 # REMEMBER THAT THE exec() DOESNT WORK INSIDE FUNCTIONS! CHAGE THE CODE BEFORE USING IT AGAIN (not warking as a function)
 
 #plot the results
-df=RegPlot(current_path)
-MeanCorrMatrix(restStateCropped,current_path)
+from RegressionsResultPlot import RegPlot
+
+
+df=RegPlot(current_path) #TODO Necesitas Hacer el goodness of fit
+# MeanCorrMatrix(restStateCropped,current_path)
 #%% Test Lasso with different "Data"
 Data2Test=[restStateOriginal.to_numpy(),
            np.log(restStateOriginal.to_numpy()),
@@ -128,29 +134,48 @@ for testName,test in zip(TestName,Test):
 sns.set(font_scale=1)
 sns.boxplot(TheDf,x='Test',y='Corr',hue='Data',palette="rocket_r").set(title='Lasso performance based on Dataset Processing')#gist_earth_r, mako_r, rocket_r
 plt.xticks(rotation=15, ha='right')
-#%% Search for the importance of the features 
+#%% Search for the importance of the features
 
 meanCorr=0
 Data=RestoreShape(np.log(restStateCropped))
 Data,labels=RemoveNan(Data, Age)
+Data,_=RemoveNan(Data, Catell)
+labels,Catell_noNan=RemoveNan(labels, Catell)
+ExpectedCatell=np.zeros(len(labels))
+for i,l in enumerate(labels):
+    ExpectedCatell[i]=ECatell[np.where(lineAge==l)[0]]
 itr=100
-for i in range(itr):
-    x_train, x_test, y_train,y_test=Split(Data,labels,.2)
+errorMatrix=np.empty((len(Data),itr))
+errorMatrix.fill(np.nan)
+predMatrix=np.empty((len(Data),itr))
+predMatrix.fill(np.nan)
+for i in tqdm(range(itr)):
+    x_train, x_test, y_train,y_test,idx_train,idx_test=Split(Data,labels,.2)
     # DataScaled=Scale(Data)
     # x_train, x_test, y_train,y_test=Split(DataScaled,labels,.2)
     model = Lasso(alpha=.2)
+    # model = LinearRegression()
     model.fit(x_train, y_train)
     pred_Lasso=model.predict(x_test)
-    lassoPred=scipy.stats.pearsonr(pred_Lasso,y_test)[0]
+    lassoPred=scipy.stats.pearsonr(y_test,pred_Lasso)[0]
+    error = np.subtract(y_test,pred_Lasso)
+    for idx,e,p in zip(idx_test,error,pred_Lasso):
+        errorMatrix[idx,i]=e
+        predMatrix[idx,i]=p
     meanCorr+=lassoPred
+    # MAE.append(mae)
 meanCorr/=itr
+meanError=np.nanmean(errorMatrix,axis=1)
+meanPred=np.round(np.nanmean(predMatrix,axis=1),2)
+from Fun4CamCanJason import *
+PlotErrorvsAge(meanPred,meanError,labels,Age,Catell_noNan,ExpectedCatell)
 
+meanROICorr=0
 MeanDiffAllbutOne=[]
 for i in tqdm(range(68)):
-    meanROICorr=0
     Data=np.delete(np.log(restStateCropped),i,axis=2)
     Data=RestoreShape(Data)
-    Data,labels=RemoveNan(Data, Age)    
+    Data,labels=RemoveNan(Data, Age)
     for _ in range(itr):
         x_train, x_test, y_train,y_test=Split(Data,labels,.2)
         model = Lasso(alpha=.2)
@@ -160,13 +185,13 @@ for i in tqdm(range(68)):
         meanROICorr+=lassoPred
     meanROICorr/=itr
     MeanDiffAllbutOne.append(meanCorr-meanROICorr)
-    
+
 MeanDiffJustOne=[]
 for i in tqdm(range(68)):
     meanROICorr=0
     Data=np.log(restStateCropped[:,:,i])
     # Data=RestoreShape(Data)
-    Data,labels=RemoveNan(Data, Age)    
+    Data,labels=RemoveNan(Data, Age)
     for _ in range(itr):
         x_train, x_test, y_train,y_test=Split(Data,labels,.2)
         model = Lasso(alpha=.2)
@@ -213,7 +238,7 @@ FirstWindowCorr/=itr
 
 corrPerBin=[]
 itr=500
-CleanData,labels=RemoveNan(restStateCropped, Catell)
+CleanData,labels=RemoveNan(restStateCropped, Age)
 for PSDbin in tqdm(np.arange(2,CleanData.shape[1])):
     corr=[]
     Data=RestoreShape(np.log(CleanData[:,PSDbin,:]))
@@ -234,7 +259,7 @@ ax.plot(GlobalMeanPSD[2:]/max(GlobalMeanPSD[2:]), 'k', linewidth=2)
 plt.legend(['Global Mean PSD'])
 corrPerBinDf=pd.DataFrame(corrPerBin.T,columns=freqs[2:100])
 sns.set(font_scale=1)
-sns.boxplot(corrPerBinDf, ax=ax).set(title='Lasso performance per frequency bin - Catell')#gist_earth_r, mako_r, rocket_r
+sns.boxplot(corrPerBinDf, ax=ax).set(title='Lasso performance per frequency bin - Age')#gist_earth_r, mako_r, rocket_r
 plt.xticks(rotation=90, ha='right')
 
 #%% Training based on frequency windows: 5 Hz w/ .5 Hz steps
@@ -261,6 +286,7 @@ corrPerBin=np.array(corrPerBin)
 fig,ax=plt.subplots()
 GlobalMeanPSD=np.mean(np.mean(restStateCropped,axis=2),axis=0)
 ax.plot(GlobalMeanPSD[int(windowSize/2):100-int(windowSize/2)]/max(GlobalMeanPSD[int(windowSize/2):100-int(windowSize/2)]), 'k', linewidth=2)
+# ax.plot(GlobalMeanPSD[int(windowSize/2):100-int(windowSize/2)]/max(GlobalMeanPSD[2:]), 'k', linewidth=2)
 plt.legend(['Global Mean PSD'])
 corrPerBinDf=pd.DataFrame(corrPerBin.T,columns=freqs[int(windowSize/2):100-int(windowSize/2)])
 sns.set(font_scale=1)

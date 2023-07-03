@@ -6,7 +6,7 @@ setwd('~/Documents/Doctorado CIC/Internship/Sylvain/Stability-project/Stability_
 
 cbbPalette= c("#4f89e0", "#f5ec6c",'#156605',"#76D7C4", '#4d3d87',   "#f5ec6c",'#D81B99')
 
-df=read.csv('./dka_data.csv', header = TRUE, stringsAsFactors = FALSE)
+df=read.csv('./dka_data_Catell.csv', header = TRUE, stringsAsFactors = FALSE)
 colnames(df)[1]='region'
 
 df$hemi =''
@@ -24,16 +24,16 @@ ggplot(df) +
              aes(fill = `decoding corr`)) + viridis::scale_fill_viridis(option='magma') + 
   theme_void() 
 
-ggsave('~/Documents/Doctorado CIC/Internship/Sylvain/Stability-project/Stability_project_Code/example4Luc 4/Santiago_decoding_corr.pdf', device = "pdf")
+ggsave('~/Documents/Doctorado CIC/Internship/Sylvain/Stability-project/Stability_project_Code/example4Luc 4/Santiago_decoding_corr_Catell.pdf', device = "pdf")
 
 
 # set colour palette
-cbbPalette= c("#DBF132", "#15A705",'#4F89E0',"#D81B99",'#4d3d87','#115d80', '#FF0000')
+#cbbPalette= c("#DBF132", "#15A705",'#4F89E0',"#D81B99",'#4d3d87','#115d80', '#FF0000')
 
-ggplot(df, aes(YEO, `decoding corr`, fill=YEO)) + 
-  geom_boxplot(width = .3, outlier.shape = NA, colour= '#888888') + ggpubr::theme_classic2() + scale_fill_manual(values=cbbPalette) 
+#ggplot(df, aes(YEO, `decoding corr`, fill=YEO)) + 
+ # geom_boxplot(width = .3, outlier.shape = NA, colour= '#888888') + ggpubr::theme_classic2() + scale_fill_manual(values=cbbPalette) 
 
-ggsave('~/Documents/Doctorado CIC/Internship/Sylvain/Stability-project/Stability_project_Code/example4Luc 4/Santiago_Yeo_networks.pdf', device = "pdf")
+#ggsave('~/Documents/Doctorado CIC/Internship/Sylvain/Stability-project/Stability_project_Code/example4Luc 4/Santiago_Yeo_networks.pdf', device = "pdf")
 
 
 ##

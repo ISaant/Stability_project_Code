@@ -8,6 +8,7 @@ Created on Wed May 10 16:26:03 2023
 
 import tensorflow as tf
 import scipy 
+import numpy as np
 from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
@@ -50,8 +51,9 @@ def Scale(Data):
 
 #%% Split data
 def Split(Data,labels,testSize,seed=None):
-    x_train, x_test, y_train, y_test = train_test_split(Data, labels, test_size=testSize,random_state=seed)
-    return  x_train, x_test, y_train, y_test
+    idx = np.arange(len(Data))
+    x_train, x_test, y_train, y_test, idx_train, idx_test = train_test_split(Data, labels, idx, test_size=testSize,random_state=seed)
+    return  x_train, x_test, y_train, y_test, idx_train, idx_test
    
 #%% Perceptron
 def Perceptron (Input0,classification):

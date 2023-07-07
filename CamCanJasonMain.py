@@ -20,7 +20,7 @@ from Fun4CamCanJason import *
 from FunClassifier4CamCanJason import *
 from fooof import FOOOF
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import Lasso, LineaRegression
+from sklearn.linear_model import Lasso, LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from TAR import TestAlgorithmsRegression
 from RegressionsResultPlot import RegPlot
@@ -66,8 +66,15 @@ for e,file in enumerate(tqdm(restStateDir)):
 restStateOriginal=restStateOriginal
 restStateOriginal/=(e+1)
 restState = myReshape(restStateOriginal.to_numpy()) #reshape into [Subjects,PSD,ROI]
+restStateNoOffset=np.empty(restState.shape)
+Sub,PSD,ROI=restState.shape
+for sub in range(Sub):
+    for roi in range(ROI):
+        offset=np.mean(restState[sub,:,roi])
+        restStateNoOffset[sub,:,roi]=restState[sub,:,roi]-offset
+        restStateNoOffset[sub,:,roi]+=abs(np.min(restStateNoOffset[sub,:,roi]))+.01
 restStateCropped = restState[:,columns,:] # Select the band-width of interest
-
+restStateCroppedNoOffset = restStateNoOffset[:,columns,:] # Select the band-width of interest
 FirstWindow = myReshape(FirstWindow.to_numpy())
 FirstWindow = FirstWindow[:,columns,:]
 #%% NNMF instead of PCA
@@ -82,11 +89,14 @@ W = NNMatFac(restStateOriginal.to_numpy(),nPca)
 periodic, aperiodic, whiten, parameters, freqsInBetween=fooof(restStateCropped, freqs[columns], inBetween)
 
 
-#%% Plot global mean and mean per ROI after FOOOF
-psdPlot(freqs, restState,Age)
-psdPlot(freqsInBetween, periodic,Age)
-psdPlot(freqsInBetween, aperiodic,Age)
-psdPlot(freqsInBetween, whitened,Age)
+#%% Plot global mean PSD per Subject
+psdAgeRangePlot(freqs,restState,Age,'')
+psdAgeRangePlot(freqs,restStateNoOffset,Age,'w/o Offset')
+
+#%% PSD mean per ROI after FOOOF
+psdPlot(freqsInBetween, periodic)
+psdPlot(freqsInBetween, aperiodic)
+psdPlot(freqsInBetween, whitened)
 
 #%% Plot mean rho based on the amount of time provided to the system as input
 # Uncoment if you want to overwrite the picke files to plot the regresions
@@ -237,8 +247,8 @@ FirstWindowCorr/=itr
 #%% Training based on frequency bins
 
 corrPerBin=[]
-itr=100
-CleanData,labels=RemoveNan(restStateCropped, Age)
+itr=50
+CleanData,labels=RemoveNan(restStateCroppedNoOffset, Age)
 Sub,PSD,ROI=CleanData.shape
 for PSDbin in tqdm(np.arange(2,CleanData.shape[1])):
     corr=[]
@@ -262,6 +272,11 @@ corrPerBinDf=pd.DataFrame(corrPerBin.T,columns=freqs[2:PSD])
 sns.set(font_scale=1)
 sns.boxplot(corrPerBinDf, ax=ax).set(title='Lasso performance per frequency bin - Age')#gist_earth_r, mako_r, rocket_r
 plt.xticks(rotation=90, ha='right')
+
+#%% Training based on frequency bins
+LassoPerBin(restStateCropped,freqs,Age,'',randomize=False)
+LassoPerBin(restStateCroppedNoOffset,freqs,Age,'w/o Offset',randomize=False)
+LassoPerBin(restStateCropped,freqs,Age,'Random Permutations',randomize=True)
 
 #%% Training based on frequency windows: 5 Hz w/ .5 Hz steps
 

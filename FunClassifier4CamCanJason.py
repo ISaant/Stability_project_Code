@@ -9,9 +9,12 @@ Created on Wed May 10 16:26:03 2023
 import tensorflow as tf
 import scipy 
 import numpy as np
+import pandas as pd
+import seaborn as sns
 from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
+from sklearn.linear_model import Lasso, LinearRegression
 from tensorflow import keras
 from tensorflow.keras.metrics import Accuracy, Precision, Recall
 import matplotlib.pyplot as plt
@@ -40,6 +43,8 @@ from tensorflow.keras import losses
 from tensorflow.keras import Model
 from sklearn import metrics as skmetrics
 from sklearn.preprocessing import StandardScaler
+from Fun4CamCanJason import *
+from tqdm import tqdm
 
 #%% Scale data
 def Scale(Data):
@@ -154,12 +159,6 @@ def evaluateClassModel(model,x_test,y_test):
     results = model.evaluate(x_test, y_test, batch_size=64, verbose=0)
     print(results)
 
-#%% Lasso
-
-
-
-
-
 #%% Function to plot predictions
 
 def plotPredictionsReg(predictions,y_test):
@@ -175,3 +174,36 @@ def plotPredictionsReg(predictions,y_test):
     plt.ylim(lims)
     plt.show()
     return pearson[0]
+
+#%%
+def LassoPerBin(OriginalData,freqs,Age,title,randomize):
+    corrPerBin=[]
+    itr=50
+    CleanData,labels=RemoveNan(OriginalData, Age)
+    Sub,PSD,ROI=CleanData.shape
+    for PSDbin in tqdm(np.arange(2,CleanData.shape[1])):
+        corr=[]
+        Data=RestoreShape(np.log(CleanData[:,PSDbin,:]))
+        for i in range(itr):
+            choiceVector=labels
+            if randomize:
+                choiceVector=np.random.choice(labels,size=len(labels),replace=False)    
+            x_train, x_test, y_train, y_test, idx_train, idx_test=Split(Data,choiceVector,.3)
+
+            # DataScaled=Scale(Data)
+            # x_train, x_test, y_train,y_test=Split(DataScaled,labels,.2)
+            model = Lasso(alpha=.2)
+            model.fit(x_train, y_train)
+            pred_Lasso=model.predict(x_test)
+            lassoPred=scipy.stats.pearsonr(pred_Lasso,y_test)[0]
+            corr.append(lassoPred)
+        corrPerBin.append(corr)
+    corrPerBin=np.array(corrPerBin)
+    fig,ax=plt.subplots()
+    GlobalMeanPSD=np.mean(np.mean(OriginalData,axis=2),axis=0)
+    ax.plot(GlobalMeanPSD[2:]/max(GlobalMeanPSD[2:]), 'k', linewidth=2)
+    plt.legend(['Global Mean PSD '])
+    corrPerBinDf=pd.DataFrame(corrPerBin.T,columns=freqs[2:PSD])
+    sns.set(font_scale=1)
+    sns.boxplot(corrPerBinDf, ax=ax).set(title='Lasso performance per frequency bin - Age ' + title)#gist_earth_r, mako_r, rocket_r
+    plt.xticks(rotation=90, ha='right')

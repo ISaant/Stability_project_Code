@@ -37,7 +37,7 @@ def RegPlot (current_path):
             iteration=np.ones(150)+i
             algorithm=np.reshape([['Lasso']*50,['Perceptron']*50,['RandomForest']*50],(150,)).astype(str)
             # df=pd.DataFrame({'Corr':corr,'Algorithm':algorithm,'Num_of_Windows [30s]':iteration})
-            df=pd.DataFrame({'Corr':np.arctanh(corr),'Algorithm':algorithm,'Num_of_Windows [30s]':iteration})
+            df=pd.DataFrame({'Corr':corr,'Algorithm':algorithm,'Num_of_Windows [30s]':iteration})
             # lcls = locals()
             # exec('df'+target+'=pd.concat([df'+target+',df],ignore_index=True)',globals(),lcls)
             Df=pd.concat([Df,df],ignore_index=True)
@@ -87,8 +87,8 @@ def RegPlot (current_path):
         fig, ax = plt.subplots()
         sns.lineplot(data=dframe,x='Num_of_Windows [30s]',y='Corr',hue='Algorithm', markers=True, palette="flare", ax=ax)
         fit_line_poli(dframe, order, ax)
-        plt.ylabel('arctanh(Corr)')
-        plt.ylim(ylim)
+        plt.ylabel('Perason Correaltion')
+        # plt.ylim(ylim)
         plt.title(title)
 
     #%%

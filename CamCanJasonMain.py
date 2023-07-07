@@ -31,7 +31,7 @@ inBetween=[1,40]
 
 #PSD
 freqs=np.arange(0,150,.5)
-alfaBetaFreqs=[0,50]
+alfaBetaFreqs=[0,60]
 columns= [i for i, x in enumerate((freqs>=alfaBetaFreqs[0]) & (freqs<alfaBetaFreqs[1])) if x]
 freqsCropped=freqs[columns]
 #columns is used to select the region of the PSD we are interested in
@@ -83,10 +83,10 @@ periodic, aperiodic, whiten, parameters, freqsInBetween=fooof(restStateCropped, 
 
 
 #%% Plot global mean and mean per ROI after FOOOF
-psdPlot(freqs, restState)
-psdPlot(freqsInBetween, periodic)
-psdPlot(freqsInBetween, aperiodic)
-psdPlot(freqsInBetween, whitened)
+psdPlot(freqs, restState,Age)
+psdPlot(freqsInBetween, periodic,Age)
+psdPlot(freqsInBetween, aperiodic,Age)
+psdPlot(freqsInBetween, whitened,Age)
 
 #%% Plot mean rho based on the amount of time provided to the system as input
 # Uncoment if you want to overwrite the picke files to plot the regresions
@@ -237,13 +237,14 @@ FirstWindowCorr/=itr
 #%% Training based on frequency bins
 
 corrPerBin=[]
-itr=500
+itr=100
 CleanData,labels=RemoveNan(restStateCropped, Age)
+Sub,PSD,ROI=CleanData.shape
 for PSDbin in tqdm(np.arange(2,CleanData.shape[1])):
     corr=[]
     Data=RestoreShape(np.log(CleanData[:,PSDbin,:]))
     for i in range(itr):
-        x_train, x_test, y_train,y_test=Split(Data,labels,.2)
+        x_train, x_test, y_train, y_test, idx_train, idx_test=Split(Data,labels,.3)
         # DataScaled=Scale(Data)
         # x_train, x_test, y_train,y_test=Split(DataScaled,labels,.2)
         model = Lasso(alpha=.2)
@@ -257,7 +258,7 @@ fig,ax=plt.subplots()
 GlobalMeanPSD=np.mean(np.mean(restStateCropped,axis=2),axis=0)
 ax.plot(GlobalMeanPSD[2:]/max(GlobalMeanPSD[2:]), 'k', linewidth=2)
 plt.legend(['Global Mean PSD'])
-corrPerBinDf=pd.DataFrame(corrPerBin.T,columns=freqs[2:100])
+corrPerBinDf=pd.DataFrame(corrPerBin.T,columns=freqs[2:PSD])
 sns.set(font_scale=1)
 sns.boxplot(corrPerBinDf, ax=ax).set(title='Lasso performance per frequency bin - Age')#gist_earth_r, mako_r, rocket_r
 plt.xticks(rotation=90, ha='right')
@@ -273,7 +274,7 @@ for PSDwinStart in tqdm(np.arange(0,CleanData.shape[1]-windowSize,step)):
     corr=[]
     Data=RestoreShape(np.log(CleanData[:,PSDwinStart:PSDwinStart+windowSize,:]))
     for i in range(itr):
-        x_train, x_test, y_train,y_test=Split(Data,labels,.2)
+        x_train, x_test, y_train, y_test, idx_train, idx_test=Split(Data,labels,.2)
         # DataScaled=Scale(Data)
         # x_train, x_test, y_train,y_test=Split(DataScaled,labels,.2)
         model = Lasso(alpha=.2)
@@ -285,10 +286,10 @@ for PSDwinStart in tqdm(np.arange(0,CleanData.shape[1]-windowSize,step)):
 corrPerBin=np.array(corrPerBin)
 fig,ax=plt.subplots()
 GlobalMeanPSD=np.mean(np.mean(restStateCropped,axis=2),axis=0)
-ax.plot(GlobalMeanPSD[int(windowSize/2):100-int(windowSize/2)]/max(GlobalMeanPSD[int(windowSize/2):100-int(windowSize/2)]), 'k', linewidth=2)
+ax.plot(GlobalMeanPSD[int(windowSize/2):len(columns)-int(windowSize/2)]/max(GlobalMeanPSD[int(windowSize/2):len(columns)-int(windowSize/2)]), 'k', linewidth=2)
 # ax.plot(GlobalMeanPSD[int(windowSize/2):100-int(windowSize/2)]/max(GlobalMeanPSD[2:]), 'k', linewidth=2)
 plt.legend(['Global Mean PSD'])
-corrPerBinDf=pd.DataFrame(corrPerBin.T,columns=freqs[int(windowSize/2):100-int(windowSize/2)])
+corrPerBinDf=pd.DataFrame(corrPerBin.T,columns=freqs[int(windowSize/2):len(columns)-int(windowSize/2)])
 sns.set(font_scale=1)
 sns.boxplot(corrPerBinDf, ax=ax).set(title='Lasso performance per frequency window [ 5 Hz w/ .5 Hz steps]  - Age')#gist_earth_r, mako_r, rocket_r
 plt.xticks(rotation=90, ha='right')

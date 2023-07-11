@@ -213,11 +213,11 @@ def LassoTrainTestRatio(Data,DataEmpty,labels,axs,pal,time):
     itr=100
     testTrainRatio=np.arange (.05,1,.05)
     predMatrix=np.zeros((len(testTrainRatio),itr))
-    cont=0
     for i,test in enumerate(tqdm(testTrainRatio)): 
         for j in range(itr):
-            x_train,_, y_train,_,_,_=Split(Data,labels,1-test,seed=cont)
-            _, x_test, _,y_test,_,_=Split(DataEmpty,labels,1-test,seed=cont)
+            seed=np.random.randint(1000,size=1)[0]
+            x_train,_, y_train,_,_,_=Split(Data,labels,1-test,seed=seed)
+            _, x_test, _,y_test,_,_=Split(DataEmpty,labels,1-test,seed=seed)
 
             # DataScaled=Scale(Data)
             # x_train, x_test, y_train,y_test=Split(DataScaled,labels,.2)
@@ -226,7 +226,6 @@ def LassoTrainTestRatio(Data,DataEmpty,labels,axs,pal,time):
             model.fit(x_train, y_train)
             pred_Lasso=model.predict(x_test)
             predMatrix[i,j]=scipy.stats.pearsonr(y_test,pred_Lasso)[0]
-            cont+=1
     corrPerBinDf=pd.DataFrame(predMatrix.T,columns=[str(i) for i in np.round(testTrainRatio,2)])
     sns.set(font_scale=1)
 

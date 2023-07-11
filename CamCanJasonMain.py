@@ -41,12 +41,13 @@ current_path = os.getcwd()
 parentPath=os.path.abspath(os.path.join(current_path,os.pardir))
 path2Data=parentPath+'/Stability-project_db/CAMCAN_Jason_PrePro/'
 mainDir=np.sort(os.listdir(path2Data))
-restStateDir=np.sort(os.listdir(path2Data+mainDir[1]+'/'))
-taskDir=np.sort(os.listdir(path2Data+mainDir[2]+'/'))
+emptyRoomDir=np.sort(os.listdir(path2Data+mainDir[0]+'/'))
+restStateDir=np.sort(os.listdir(path2Data+mainDir[2]+'/'))
+taskDir=np.sort(os.listdir(path2Data+mainDir[3]+'/'))
 
 #%% Read demografics 
 
-demographics=pd.read_csv(path2Data+mainDir[0])
+demographics=pd.read_csv(path2Data+mainDir[1])
 lineAge,ECatell=PltDist(demographics)
 Catell=demographics['Catell_score'].to_numpy()
 Age=demographics['age'].to_numpy()
@@ -56,13 +57,16 @@ Targets=['Catell','Age','Acer']
 
 #%% average Resting state using all time windows
 for e,file in enumerate(tqdm(restStateDir)):
-    matrix=pd.read_csv(path2Data+mainDir[1]+'/'+file,header=None)
+    matrix=pd.read_csv(path2Data+mainDir[2]+'/'+file,header=None)
     if e == 0:
         # print (e)
         restStateOriginal=matrix
         FirstWindow=matrix
         continue
     restStateOriginal+=matrix
+emptyRoom=pd.read_csv(path2Data+mainDir[0]+'/'+emptyRoomDir[0],header=None)
+emptyRoom = myReshape(emptyRoom.to_numpy()) #reshape into [Subjects,PSD,ROI]
+emptyRoomCropped = emptyRoom[:,columns,:]
 restStateOriginal=restStateOriginal
 restStateOriginal/=(e+1)
 restState = myReshape(restStateOriginal.to_numpy()) #reshape into [Subjects,PSD,ROI]
@@ -187,7 +191,7 @@ for i in tqdm(range(68)):
     Data=RestoreShape(Data)
     Data,labels=RemoveNan(Data, Age)
     for _ in range(itr):
-        x_train, x_test, y_train,y_test=Split(Data,labels,.2)
+        x_train, x_test, y_train,y_test,_,_=Split(Data,labels,.2)
         model = Lasso(alpha=.2)
         model.fit(x_train, y_train)
         pred_Lasso=model.predict(x_test)
@@ -203,7 +207,7 @@ for i in tqdm(range(68)):
     # Data=RestoreShape(Data)
     Data,labels=RemoveNan(Data, Age)
     for _ in range(itr):
-        x_train, x_test, y_train,y_test=Split(Data,labels,.2)
+        x_train, x_test, y_train,y_test,_,_=Split(Data,labels,.2)
         model = Lasso(alpha=.2)
         model.fit(x_train, y_train)
         pred_Lasso=model.predict(x_test)
@@ -214,6 +218,24 @@ for i in tqdm(range(68)):
 
 MeanDiffJustOne2=1-np.array(MeanDiffJustOne)
 MeanDiffAllbutOne2=1-np.array(MeanDiffAllbutOne)
+
+MeanDiffJustOneER=[] #EmptyRoom
+for i in tqdm(range(68)):
+    meanROICorr=0
+    Data=np.log(emptyRoomCroppedCropped[:,:,i])
+    # Data=RestoreShape(Data)
+    Data,labels=RemoveNan(Data, Age)
+    for _ in range(itr):
+        x_train, x_test, y_train,y_test,_,_=Split(Data,labels,.2)
+        model = Lasso(alpha=.2)
+        model.fit(x_train, y_train)
+        pred_Lasso=model.predict(x_test)
+        lassoPred=scipy.stats.pearsonr(pred_Lasso,y_test)[0]
+        meanROICorr+=lassoPred
+    meanROICorr/=itr
+    MeanDiffJustOneER.append(meanCorr-meanROICorr)
+
+MeanDiffJustOneER2=1-np.array(MeanDiffJustOne)
 #%%
 with open(current_path+'/Pickle/meanCorr_allFeatures.pickle', 'wb') as f:
     pickle.dump(meanCorr, f)
@@ -311,27 +333,19 @@ plt.xticks(rotation=90, ha='right')
 
 
 #%% Overfitting curve
-Data=RestoreShape(np.log(restStateCropped))
-Data,labels=RemoveNan(Data, Age)
-itr=100
-testTrainRatio=np.arange (.5,1,.05)
-predMatrix=np.empty((len(testTrainRatio),itr))
-predMatrix.fill(np.nan)
-for test in range(testTrainRatio): 
-    for i in tqdm(range(itr)):
-        x_train, x_test, y_train,y_test,idx_train,idx_test=Split(Data,labels,1-test)
-        # DataScaled=Scale(Data)
-        # x_train, x_test, y_train,y_test=Split(DataScaled,labels,.2)
-        model = Lasso(alpha=.2)
-        # model = LinearRegression()
-        model.fit(x_train, y_train)
-        pred_Lasso=model.predict(x_test)
-        lassoPred=scipy.stats.pearsonr(y_test,pred_Lasso)[0]
-        for idx,e,p in zip(idx_test,error,pred_Lasso):
-            errorMatrix[idx,i]=e
-            predMatrix[idx,i]=p
-        meanCorr+=lassoPred
-
+fig,ax=plt.subplots(1,2,figsize=(17, 9))
+DataAll=RestoreShape(np.log(restStateCropped))
+DataAll,labels=RemoveNan(DataAll, Age)
+DataFirstWindow=RestoreShape(np.log(FirstWindow))
+DataFirstWindow,labels=RemoveNan(DataFirstWindow, Age)
+DataEmptyRoom=RestoreShape(np.log(emptyRoomCropped))
+DataEmptyRoom,labels=RemoveNan(DataEmptyRoom, Age)
+predMatrixAll=LassoTrainTestRatio(DataAll,DataAll,labels,ax[1],'magma','300 sec')
+predMatrixFirstWindow=LassoTrainTestRatio(DataFirstWindow,DataFirstWindow,labels,ax[0],'mako','30 sec')
+predMatrixAll=LassoTrainTestRatio(DataAll,DataEmptyRoom,labels,ax[1],'gist_gray','300 sec')
+predMatrixFirstWindow=LassoTrainTestRatio(DataFirstWindow,DataEmptyRoom,labels,ax[0],'gist_gray','30 sec')
+# predMatrixFirstWindow=LassoTrainTestRatio(DataEmptyRoom,labels,ax,'gist_gray','30 sec')
+plt.suptitle('Lasso performance under different Tests/Train ratios - Age')
 #%% Dictionary For ggseg
 
 

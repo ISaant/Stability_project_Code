@@ -310,6 +310,28 @@ sns.boxplot(corrPerBinDf, ax=ax).set(title='Lasso performance per frequency wind
 plt.xticks(rotation=90, ha='right')
 
 
+#%% Overfitting curve
+Data=RestoreShape(np.log(restStateCropped))
+Data,labels=RemoveNan(Data, Age)
+itr=100
+testTrainRatio=np.arange (.5,1,.05)
+predMatrix=np.empty((len(testTrainRatio),itr))
+predMatrix.fill(np.nan)
+for test in range(testTrainRatio): 
+    for i in tqdm(range(itr)):
+        x_train, x_test, y_train,y_test,idx_train,idx_test=Split(Data,labels,1-test)
+        # DataScaled=Scale(Data)
+        # x_train, x_test, y_train,y_test=Split(DataScaled,labels,.2)
+        model = Lasso(alpha=.2)
+        # model = LinearRegression()
+        model.fit(x_train, y_train)
+        pred_Lasso=model.predict(x_test)
+        lassoPred=scipy.stats.pearsonr(y_test,pred_Lasso)[0]
+        for idx,e,p in zip(idx_test,error,pred_Lasso):
+            errorMatrix[idx,i]=e
+            predMatrix[idx,i]=p
+        meanCorr+=lassoPred
+
 #%% Dictionary For ggseg
 
 

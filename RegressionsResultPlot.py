@@ -33,9 +33,10 @@ def RegPlot (current_path):
         Df=pd.DataFrame(columns=['Corr','Algorithm','Num_of_Windows [30s]'])
         for i in range(10):
             results=test[i]
-            corr=np.reshape(results,(150,),order='F')
-            iteration=np.ones(150)+i
-            algorithm=np.reshape([['Lasso']*50,['Perceptron']*50,['RandomForest']*50],(150,)).astype(str)
+            rshape=results.shape
+            corr=np.reshape(results,(np.prod(list(results.shape)),),order='F')
+            iteration=np.ones(np.prod(list(results.shape)))+i
+            algorithm=np.reshape([['Lasso']*rshape[0],['Perceptron']*rshape[0],['RandomForest']*rshape[0]],(np.prod(list(results.shape)),)).astype(str)
             # df=pd.DataFrame({'Corr':corr,'Algorithm':algorithm,'Num_of_Windows [30s]':iteration})
             df=pd.DataFrame({'Corr':corr,'Algorithm':algorithm,'Num_of_Windows [30s]':iteration})
             # lcls = locals()
@@ -58,7 +59,7 @@ def RegPlot (current_path):
                 for j,win in enumerate(windows):
                     mean=np.mean(dframe.iloc[np.where((dframe['Num_of_Windows [30s]']==win) & (dframe['Algorithm']==alg))[0]]['Corr'])
                     Means[j]=mean
-                    print(Means.shape)
+                    # print(Means.shape)
                 MeansDf=pd.DataFrame({'Corr':Means,'Windows': list(windows)})
                 X=windows.reshape(-1, 1)
                 regressor = SVR(kernel="poly", C=100, gamma="auto", degree=2, epsilon=0.1, coef0=1)
@@ -73,7 +74,7 @@ def RegPlot (current_path):
 
                 if uu1 < uu2 and yregPoly[0] < yregPoly[1] and np.diff(yregPoly)[0] > .01:
                     ax.plot(X, yregPoly,'k--',alpha=.5,label='Poly')# plt.plot(X_grid, regressor.predict(X_grid), color = 'blue')
-                    where=np.where(np.diff(yregPoly)<.01)[0][0]
+                    where=np.where(np.diff(yregPoly)<.005)[0][0]
                     plt.annotate(str(np.round(np.diff(yregPoly)[where],4)),
                                  (windows[where]+.5,Means[where]+.05),fontsize=12)
                     plt.vlines(windows[where]+.49, Means[where]+.05, Means[where]-.05,'r', alpha = .7)

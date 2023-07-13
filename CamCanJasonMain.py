@@ -181,6 +181,7 @@ for i in tqdm(range(itr)):
 meanCorr/=itr
 meanError=np.nanmean(errorMatrix,axis=1)
 meanPred=np.round(np.nanmean(predMatrix,axis=1),2)
+
 from Fun4CamCanJason import *
 PlotErrorvsAge(meanPred,meanError,labels,Age,Catell_noNan,ExpectedCatell)
 
@@ -222,11 +223,15 @@ MeanDiffAllbutOne2=1-np.array(MeanDiffAllbutOne)
 MeanDiffJustOneER=[] #EmptyRoom
 for i in tqdm(range(68)):
     meanROICorr=0
-    Data=np.log(emptyRoomCroppedCropped[:,:,i])
+    Data=np.log(restStateCropped[:,:,i])
+    DataEmpty=np.log(emptyRoomCropped[:,:,i])
     # Data=RestoreShape(Data)
     Data,labels=RemoveNan(Data, Age)
+    DataEmpty,labels=RemoveNan(DataEmpty, Age)
     for _ in range(itr):
-        x_train, x_test, y_train,y_test,_,_=Split(Data,labels,.2)
+        seed=np.random.randint(1000,size=1)[0]
+        x_train,_, y_train,_,_,_=Split(Data,labels,.2,seed=seed)
+        _, x_test, _,y_test,_,_=Split(DataEmpty,labels,.2,seed=seed)
         model = Lasso(alpha=.2)
         model.fit(x_train, y_train)
         pred_Lasso=model.predict(x_test)
@@ -235,7 +240,7 @@ for i in tqdm(range(68)):
     meanROICorr/=itr
     MeanDiffJustOneER.append(meanCorr-meanROICorr)
 
-MeanDiffJustOneER2=1-np.array(MeanDiffJustOne)
+MeanDiffJustOneER2=(1-np.array(MeanDiffJustOneER))*meanCorr
 #%%
 with open(current_path+'/Pickle/meanCorr_allFeatures.pickle', 'wb') as f:
     pickle.dump(meanCorr, f)

@@ -42,7 +42,8 @@ freqsFooof=freqs[columnsfooof]
 current_path = os.getcwd()
 parentPath=os.path.abspath(os.path.join(current_path,os.pardir))
 path2Data=parentPath+'/Stability-project_db/CAMCAN_Jason_PrePro/'
-path2Anatomical=parentPath+'/Stability-project_db/CAMCAN_Jason_PrePro/'
+path2Anatomical=parentPath+'/Stability-project_db/Anatomical_Features/'
+AnatFile=os.listdir(path2Anatomical)
 mainDir=np.sort(os.listdir(path2Data))
 emptyRoomDir=np.sort(os.listdir(path2Data+mainDir[0]+'/'))
 restStateDir=np.sort(os.listdir(path2Data+mainDir[2]+'/'))
@@ -51,13 +52,15 @@ taskDir=np.sort(os.listdir(path2Data+mainDir[3]+'/'))
 #%% Read demografics 
 
 demographics=pd.read_csv(path2Data+mainDir[1])
-lineAge,ECatell=PltDist(demographics)
+lineAge,ECatell=PltDistDemographics(demographics)
 Catell=demographics['Catell_score'].to_numpy()
 Age=demographics['age'].to_numpy()
 Acer=demographics['additional_acer'].to_numpy()
 Targets=['Catell','Age','Acer']
 
-#%% 
+#%% Plot dist cortical thickness
+CorticalThickness=pd.read_csv(path2Anatomical+AnatFile[0],header=None)
+CorticalThickness_std=PltDistAnat(CorticalThickness,demographics) #Plot the map using R
 
 #%% average Resting state using all time windows
 for e,file in enumerate(tqdm(restStateDir)):

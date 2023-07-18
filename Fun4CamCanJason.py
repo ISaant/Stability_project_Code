@@ -12,6 +12,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import scipy
+import statistics
 from fooof import FOOOF
 from tqdm import tqdm
 from matplotlib.pyplot import plot, figure
@@ -85,7 +86,7 @@ def RestoreShape(Data):
         return Data
 
 #==============================================================================
-def PltDist(demographics):
+def PltDistDemographics(demographics):
     
     sns.displot(data=demographics,x='age',kde=True)
     plt.title('Age Histogram')
@@ -163,6 +164,72 @@ def PltDist(demographics):
     plt.ylim([60,110])
     plt.show()
     return line_age, line_predCatell
+
+#==============================================================================
+
+def PltDistAnat(CorticalThickness,demographics):
+    ROI_Names=list(pd.read_csv('ROI_Names.csv',header=None)[0])
+    Catell=demographics['Catell_score'].to_numpy()
+    Age=demographics['age'].to_numpy()
+    MeanCorThick=np.mean(CorticalThickness,axis=1)
+    idxOutliers=np.array([119,491])
+    MeanCorThick=np.delete(MeanCorThick,idxOutliers)
+    Catell=np.delete(Catell, idxOutliers)
+    Age=np.delete(Age, idxOutliers)
+    MeanCorticalThickness=pd.DataFrame({'MeanCorThick':MeanCorThick,
+                               'Age':Age,
+                               'Catell': Catell})
+    RoundAge=copy.copy(Age)
+    RoundAge[RoundAge<30]=30
+    for i in np.arange(30,90,10):
+        print(i)
+        RoundAge[np.logical_and(RoundAge>i, RoundAge<=i+10)]=(i+10)
+    # RoundAge[RoundAge>80]=90
+    MeanCorticalThickness['AgeIntervals']=RoundAge
+    sns.displot(data=MeanCorticalThickness,x='MeanCorThick', hue='AgeIntervals',kind='kde', fill=True,palette='mako')
+    plt.title('Mean Cortical Thickness Score Distribution')
+
+
+    # plt.figure()
+    sns.relplot(data=MeanCorticalThickness,y='MeanCorThick', x='Age', hue='AgeIntervals',palette='mako')
+    plt.title('Age-Cortical Thickness Regression')
+    
+    idx=np.argwhere(np.isnan(Catell))
+    Catell=np.delete(Catell, idx)
+    Age=np.delete(Age, idx)
+    MeanCorThick=np.delete(MeanCorThick,idx)
+    rsq,pvalue=scipy.stats.pearsonr(Age,MeanCorThick)
+    Age=Age.reshape(-1,1)
+    linReg = linear_model.LinearRegression()
+    linReg.fit(Age,MeanCorThick)
+    # Predict data of estimated models
+    line_age  = np.round(np.arange(Age.min()-5, Age.max()+5,.01),2)[:, np.newaxis]
+    line_predCorThick = linReg.predict(line_age)
+    plt.plot(line_age,line_predCorThick,color="yellowgreen", linewidth=4, alpha=.7)
+    plt.annotate('PearsonR= '+str(round(rsq,2)),
+                  (30,2.3),fontsize=12)
+    plt.annotate('pvalue= '+str(pvalue),
+                  (30,2.2),fontsize=12)
+    
+    sns.relplot(data=MeanCorticalThickness,y='MeanCorThick', x='Catell', hue='AgeIntervals',palette='mako')
+    plt.title('Age-Cortical Thickness Regression')
+    rsq,pvalue=scipy.stats.pearsonr(Catell,MeanCorThick)
+    Catell=Catell.reshape(-1,1)
+    linReg = linear_model.LinearRegression()
+    linReg.fit(Catell,MeanCorThick)
+    # Predict data of estimated models
+    line_Catell = np.round(np.arange(Catell.min()-2, Catell.max()+2,.01),2)[:, np.newaxis]
+    line_predCorThick = linReg.predict(line_Catell)
+    plt.plot(line_Catell,line_predCorThick,color="yellowgreen", linewidth=4, alpha=.7)
+    plt.annotate('PearsonR= '+str(round(rsq,2)),
+                  (30,2.3),fontsize=12)
+    plt.annotate('pvalue= '+str(pvalue),
+                  (30,2.2),fontsize=12)
+
+    CorticalThickness_std=pd.DataFrame({'CorThick_std':[statistics.stdev(x)for x in np.transpose(CorticalThickness.to_numpy())],
+                    'ROI_Names': ROI_Names})
+    return CorticalThickness_std
+
 #==============================================================================
 def RemoveNan(Data,labels):
     idx=np.argwhere(np.isnan(labels))

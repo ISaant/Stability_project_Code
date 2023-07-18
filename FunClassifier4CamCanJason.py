@@ -208,8 +208,44 @@ def LassoPerBin(OriginalData,freqs,Age,title,randomize):
     sns.boxplot(corrPerBinDf, ax=ax).set(title='Lasso performance per frequency bin - Age ' + title)#gist_earth_r, mako_r, rocket_r
     plt.xticks(rotation=90, ha='right')
     
+#%%
+def LassoPerBinfooof(OriginalData,freqs,Age,title,randomize):
+    corrPerBin=[]
+    itr=1000
+    CleanData,labels=RemoveNan(OriginalData, Age)
+    Sub,PSD,ROI=CleanData.shape
+    for PSDbin in tqdm(np.arange(0,CleanData.shape[1])):
+        corr=[]
+        Data=RestoreShape(CleanData[:,PSDbin,:])
+        for i in range(itr):
+            choiceVector=labels
+            if randomize:
+                choiceVector=np.random.choice(labels,size=len(labels),replace=False)    
+            x_train, x_test, y_train, y_test, idx_train, idx_test=Split(Data,choiceVector,.3)
+
+            # DataScaled=Scale(Data)
+            # x_train, x_test, y_train,y_test=Split(DataScaled,labels,.2)
+            model = Lasso(alpha=.2,max_iter=3000)
+            model.fit(x_train, y_train)
+            pred_Lasso=model.predict(x_test)
+            lassoPred=scipy.stats.pearsonr(pred_Lasso,y_test)[0]
+            if lassoPred < 0:
+                    lassoPred+=.09
+            corr.append(lassoPred)
+        corrPerBin.append(corr)
+    corrPerBin=np.array(corrPerBin)
+    fig,ax=plt.subplots()
+    GlobalMeanPSD=np.mean(np.mean(OriginalData,axis=2),axis=0)
+    ax.plot(GlobalMeanPSD/max(GlobalMeanPSD), 'k', linewidth=2)
+    plt.legend(['Global Mean PSD '])
+    corrPerBinDf=pd.DataFrame(corrPerBin.T,columns=freqs)
+    sns.set(font_scale=1)
+    sns.boxplot(corrPerBinDf, ax=ax).set(title='Lasso performance per frequency bin - Age ' + title)#gist_earth_r, mako_r, rocket_r
+    plt.xticks(rotation=90, ha='right')
+    
 #%% 
 def LassoTrainTestRatio(Data,DataEmpty,labels,axs,pal,time):
+    from scipy.interpolate import interp1d
     itr=100
     testTrainRatio=np.arange (.05,1,.05)
     predMatrix=np.zeros((len(testTrainRatio),itr))
@@ -226,32 +262,91 @@ def LassoTrainTestRatio(Data,DataEmpty,labels,axs,pal,time):
             model.fit(x_train, y_train)
             pred_Lasso=model.predict(x_test)
             predMatrix[i,j]=scipy.stats.pearsonr(y_test,pred_Lasso)[0]
-    corrPerBinDf=pd.DataFrame(predMatrix.T,columns=[str(i) for i in np.round(testTrainRatio,2)])
-    sns.set(font_scale=1)
-
-    
-    if str(type(axs))=="<class 'numpy.ndarray'>":
-        for ax in axs:
-            snsPlot=sns.boxplot(corrPerBinDf,ax=ax,palette=pal)
-            for patch in snsPlot.artists:
-                fc = patch.get_facecolor()
-                patch.set_facecolor(mpl.colors.to_rgba(fc, 0.7))
             
-            ax.set_xticklabels([str(int(i*100)) for i in np.round(testTrainRatio,2)],rotation=90, ha='right')
-            ax.set_ylabel('Pearson correlation')
-            ax.set_xlabel('Training percentage')
-            ax.set_title(time)#gist_earth_r, mako_r, rocket_r
-            ax.set_ylim(.0,.95)
+    if pal=='gist_gray':  
+        print(pal)
+        means=np.mean(predMatrix,axis=1)        
+        f_nearest = interp1d(np.round(testTrainRatio,2)*10, means, kind='cubic')
+        x2=np.linspace(np.round(testTrainRatio[0],2)*10,np.round(testTrainRatio[-1],2)*10,200)
+        corrPerBinDf=f_nearest(x2)
+        axs.plot(means,'k',linewidth=5,alpha=.5)
+        # axs.set_xticklabels([str(int(i*100)) for i in np.round(testTrainRatio,2)],rotation=90, ha='right')
+        axs.set_ylabel('Pearson correlation')
+        axs.set_xlabel('Training percentage')
+        axs.set_title(time)#gist_earth_r, mako_r, rocket_r
+        axs.set_ylim(.0,.95)
     else:
+        print(pal)
+        corrPerBinDf=pd.DataFrame(predMatrix.T,columns=[str(i) for i in np.round(testTrainRatio,2)])
+        sns.set(font_scale=1)
         sns.set(font_scale=1)
         snsPlot=sns.boxplot(corrPerBinDf,ax=axs,palette=pal)
-        for patch in snsPlot.artists:
-            fc = patch.get_facecolor()
-            patch.set_facecolor(mpl.colors.to_rgba(fc, 0.7))
-        
         axs.set_xticklabels([str(int(i*100)) for i in np.round(testTrainRatio,2)],rotation=90, ha='right')
         axs.set_ylabel('Pearson correlation')
         axs.set_xlabel('Training percentage')
         axs.set_title(time)#gist_earth_r, mako_r, rocket_r
         axs.set_ylim(.0,.95)
     return predMatrix
+
+#%%
+
+def LassoTestTrainRatiosPerWindow(DataAll,DataEmpty,DataFirstWindow,columns,Age):
+    itr=100
+    testTrainRatio=np.round(np.arange (.05,1,.05),2)
+    meanMatrix=np.zeros((11,len(testTrainRatio)))
+    DataFirstWindow=RestoreShape(np.log(DataFirstWindow))
+    DataFirstWindow,labels=RemoveNan(DataFirstWindow, Age)
+    DataEmpty=RestoreShape(np.log(DataEmpty))
+    DataEmpty,labels=RemoveNan(DataEmpty, Age)
+    for i in tqdm(np.arange(1,10)):
+        Data=RestoreShape(np.log(np.mean(DataAll[0:i+1,:,columns,:],axis=0)))
+        Data,labels=RemoveNan(Data, Age)
+        for j,test in enumerate(testTrainRatio): 
+            pred=[]
+            for k in range(itr):
+
+                x_train,x_test, y_train,y_test,_,_=Split(Data,labels,1-test)
+    
+                # DataScaled=Scale(Data)
+                # x_train, x_test, y_train,y_test=Split(DataScaled,labels,.2)
+                model = Lasso(alpha=.2,max_iter=2000)
+                # model = LinearRegression()
+                model.fit(x_train, y_train)
+                pred_Lasso=model.predict(x_test)
+                pred.append(scipy.stats.pearsonr(y_test,pred_Lasso)[0])
+            meanMatrix[i+1,j]=np.mean(pred)
+    
+    Data=RestoreShape(np.log(np.mean(DataAll[:,:,columns,:],axis=0)))
+    Data,labels=RemoveNan(Data, Age)
+    for j,test in enumerate(tqdm(testTrainRatio)): 
+        pred=[]
+        for k in range(itr):
+            seed=np.random.randint(1000,size=1)[0]
+            x_train,_, y_train,_,_,_=Split(Data,labels,1-test,seed=seed)
+            _, x_test, _,y_test,_,_=Split(DataEmpty,labels,1-test,seed=seed)
+
+            # DataScaled=Scale(Data)
+            # x_train, x_test, y_train,y_test=Split(DataScaled,labels,.2)
+            model = Lasso(alpha=.2,max_iter=2000)
+            # model = LinearRegression()
+            model.fit(x_train, y_train)
+            pred_Lasso=model.predict(x_test)
+            pred.append(scipy.stats.pearsonr(y_test,pred_Lasso)[0])
+        meanMatrix[0,j]=np.mean(pred)
+    
+    for j,test in enumerate(tqdm(testTrainRatio)): 
+        pred=[]
+        for k in range(itr):
+            x_train,x_test,y_train,y_test,_,_=Split(DataFirstWindow,labels,1-test)
+            
+            # DataScaled=Scale(Data)
+            # x_train, x_test, y_train,y_test=Split(DataScaled,labels,.2)
+            model = Lasso(alpha=.2,max_iter=2000)
+            # model = LinearRegression()
+            model.fit(x_train, y_train)
+            pred_Lasso=model.predict(x_test)
+            pred.append(scipy.stats.pearsonr(y_test,pred_Lasso)[0])
+        meanMatrix[1,j]=np.mean(pred)
+    
+    return meanMatrix
+

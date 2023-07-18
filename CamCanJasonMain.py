@@ -33,13 +33,16 @@ inBetween=[1,40]
 freqs=np.arange(0,150,.5)
 alfaBetaFreqs=[0,60]
 columns= [i for i, x in enumerate((freqs>=alfaBetaFreqs[0]) & (freqs<alfaBetaFreqs[1])) if x]
+columnsfooof= [i for i, x in enumerate((freqs>=inBetween[0]) & (freqs<inBetween[1])) if x]
 freqsCropped=freqs[columns]
+freqsFooof=freqs[columnsfooof]
 #columns is used to select the region of the PSD we are interested in
 
 #%% Directories
 current_path = os.getcwd()
 parentPath=os.path.abspath(os.path.join(current_path,os.pardir))
 path2Data=parentPath+'/Stability-project_db/CAMCAN_Jason_PrePro/'
+path2Anatomical=parentPath+'/Stability-project_db/CAMCAN_Jason_PrePro/'
 mainDir=np.sort(os.listdir(path2Data))
 emptyRoomDir=np.sort(os.listdir(path2Data+mainDir[0]+'/'))
 restStateDir=np.sort(os.listdir(path2Data+mainDir[2]+'/'))
@@ -54,33 +57,34 @@ Age=demographics['age'].to_numpy()
 Acer=demographics['additional_acer'].to_numpy()
 Targets=['Catell','Age','Acer']
 
+#%% 
 
 #%% average Resting state using all time windows
 for e,file in enumerate(tqdm(restStateDir)):
-    matrix=pd.read_csv(path2Data+mainDir[2]+'/'+file,header=None)
+    matrix=myReshape(pd.read_csv(path2Data+mainDir[2]+'/'+file,header=None).to_numpy())[np.newaxis, :]
     if e == 0:
         # print (e)
-        restStateOriginal=matrix
+        restStateAll=matrix 
         FirstWindow=matrix
         continue
-    restStateOriginal+=matrix
-emptyRoom=pd.read_csv(path2Data+mainDir[0]+'/'+emptyRoomDir[0],header=None)
-emptyRoom = myReshape(emptyRoom.to_numpy()) #reshape into [Subjects,PSD,ROI]
+    restStateAll=np.concatenate((restStateAll,matrix))
+emptyRoom=pd.read_csv(path2Data+mainDir[0]+'/'+emptyRoomDir[0],header=None).to_numpy()
+emptyRoom = myReshape(emptyRoom) #reshape into [Subjects,PSD,ROI]
 emptyRoomCropped = emptyRoom[:,columns,:]
-restStateOriginal=restStateOriginal
-restStateOriginal/=(e+1)
-restState = myReshape(restStateOriginal.to_numpy()) #reshape into [Subjects,PSD,ROI]
+restStateOriginal=RestoreShape(np.mean(restStateAll,axis=0))
+restState = myReshape(restStateOriginal) #reshape into [Subjects,PSD,ROI]
 restStateNoOffset=np.empty(restState.shape)
 Sub,PSD,ROI=restState.shape
 for sub in range(Sub):
     for roi in range(ROI):
-        offset=np.mean(restState[sub,:,roi])
+        # offset=np.mean(restState[sub,:,roi])
+        offset=restState[sub,0,roi]
         restStateNoOffset[sub,:,roi]=restState[sub,:,roi]-offset
-        restStateNoOffset[sub,:,roi]+=abs(np.min(restStateNoOffset[sub,:,roi]))+.01
+        # restStateNoOffset[sub,:,roi]+=abs(np.min(restStateNoOffset[sub,:,roi]))+.01
 restStateCropped = restState[:,columns,:] # Select the band-width of interest
 restStateCroppedNoOffset = restStateNoOffset[:,columns,:] # Select the band-width of interest
-FirstWindow = myReshape(FirstWindow.to_numpy())
-FirstWindow = FirstWindow[:,columns,:]
+restStateFooof=restState[:,columnsfooof,:]
+FirstWindow = np.squeeze(FirstWindow,axis=0)[:,columns,:]
 #%% NNMF instead of PCA
 nPca=100
 # pca_df,pro2use,prop_varianza_acum=myPCA (np.log(restStateOriginal),True, nPca)
@@ -89,18 +93,25 @@ W = NNMatFac(restStateOriginal.to_numpy(),nPca)
 
 #%%
 #  FOOOF
-
-periodic, aperiodic, whiten, parameters, freqsInBetween=fooof(restStateCropped, freqs[columns], inBetween)
+    
+periodic, aperiodic, whiten, parameters, freqsInBetween=fooof(restStateFooof, freqsFooof, inBetween)
+mywhiten=myWhiten(restState[:,columns[2:],:],freqs[columns[2:]],parameters)
+#%% Plot global mean PSD per Subject of just one ROI
+psdAgeRangePlot_JustOneROI(freqs,restState[:,:,1],Age,'',False)
+psdAgeRangePlot_JustOneROI(freqs,restStateNoOffset[:,:,1],Age,'w/o Offset',False)
+psdAgeRangePlot_JustOneROI(freqs[columns[2:]],mywhiten[:,:,1],Age,'- Whiten',True)
 
 
 #%% Plot global mean PSD per Subject
-psdAgeRangePlot(freqs,restState,Age,'')
-psdAgeRangePlot(freqs,restStateNoOffset,Age,'w/o Offset')
+psdAgeRangePlot(freqs,restState,Age,'',False)
+psdAgeRangePlot(freqs,restStateNoOffset,Age,'w/o Offset',False)
+psdAgeRangePlot(freqs[columns[2:]],mywhiten,Age,' - Whiten',True)
+
 
 #%% PSD mean per ROI after FOOOF
 psdPlot(freqsInBetween, periodic)
 psdPlot(freqsInBetween, aperiodic)
-psdPlot(freqsInBetween, whitened)
+psdPlot(freqsInBetween, whiten)
 
 #%% Plot mean rho based on the amount of time provided to the system as input
 # Uncoment if you want to overwrite the picke files to plot the regresions
@@ -202,8 +213,9 @@ for i in tqdm(range(68)):
     MeanDiffAllbutOne.append(meanCorr-meanROICorr)
 
 MeanDiffJustOne=[]
+AllROICorr=[]
 for i in tqdm(range(68)):
-    meanROICorr=0
+    ROICorr=[]
     Data=np.log(restStateCropped[:,:,i])
     # Data=RestoreShape(Data)
     Data,labels=RemoveNan(Data, Age)
@@ -213,16 +225,18 @@ for i in tqdm(range(68)):
         model.fit(x_train, y_train)
         pred_Lasso=model.predict(x_test)
         lassoPred=scipy.stats.pearsonr(pred_Lasso,y_test)[0]
-        meanROICorr+=lassoPred
-    meanROICorr/=itr
+        ROICorr.append(lassoPred)
+    AllROICorr.append(ROICorr)
+    meanROICorr=np.mean(ROICorr)
     MeanDiffJustOne.append(meanCorr-meanROICorr)
 
-MeanDiffJustOne2=1-np.array(MeanDiffJustOne)
-MeanDiffAllbutOne2=1-np.array(MeanDiffAllbutOne)
+MeanDiffJustOne2=(1-np.array(MeanDiffJustOne))*meanCorr
+MeanDiffAllbutOne2=1-np.array(MeanDiffAllbutOne) *meanCorr
 
 MeanDiffJustOneER=[] #EmptyRoom
+AllROICorrER=[]
 for i in tqdm(range(68)):
-    meanROICorr=0
+    ROICorr=[]
     Data=np.log(restStateCropped[:,:,i])
     DataEmpty=np.log(emptyRoomCropped[:,:,i])
     # Data=RestoreShape(Data)
@@ -236,11 +250,19 @@ for i in tqdm(range(68)):
         model.fit(x_train, y_train)
         pred_Lasso=model.predict(x_test)
         lassoPred=scipy.stats.pearsonr(pred_Lasso,y_test)[0]
-        meanROICorr+=lassoPred
-    meanROICorr/=itr
+        ROICorr.append(lassoPred)
+    AllROICorrER.append(ROICorr)
+    meanROICorr=np.mean(ROICorr)
     MeanDiffJustOneER.append(meanCorr-meanROICorr)
 
 MeanDiffJustOneER2=(1-np.array(MeanDiffJustOneER))*meanCorr
+
+#Correlation between empty room map and ROI map
+
+CorrJO_Empty=[] #JustOne
+for JO,ER in zip(AllROICorr,AllROICorrER):
+    CorrJO_Empty.append(scipy.stats.pearsonr(JO,ER)[0])
+CorrJO_Empty=np.array(CorrJO_Empty)
 #%%
 with open(current_path+'/Pickle/meanCorr_allFeatures.pickle', 'wb') as f:
     pickle.dump(meanCorr, f)
@@ -303,6 +325,7 @@ plt.xticks(rotation=90, ha='right')
 #%% Training based on frequency bins
 LassoPerBin(restStateCropped,freqs,Age,'',randomize=False)
 LassoPerBin(restStateCroppedNoOffset,freqs,Age,'w/o Offset',randomize=False)
+LassoPerBinfooof(mywhiten,freqs[columns[2:]],Age,' Whiten',randomize=False)
 LassoPerBin(restStateCropped,freqs,Age,'Random Permutations',randomize=True)
 
 #%% Training based on frequency windows: 5 Hz w/ .5 Hz steps
@@ -345,12 +368,29 @@ DataFirstWindow=RestoreShape(np.log(FirstWindow))
 DataFirstWindow,labels=RemoveNan(DataFirstWindow, Age)
 DataEmptyRoom=RestoreShape(np.log(emptyRoomCropped))
 DataEmptyRoom,labels=RemoveNan(DataEmptyRoom, Age)
+predMatrixAllEmpty=LassoTrainTestRatio(DataAll,DataEmptyRoom,labels,ax[1],'gist_gray','300 sec')
+predMatrixFirstWindowEmpty=LassoTrainTestRatio(DataFirstWindow,DataEmptyRoom,labels,ax[0],'gist_gray','30 sec')
 predMatrixAll=LassoTrainTestRatio(DataAll,DataAll,labels,ax[1],'magma','300 sec')
 predMatrixFirstWindow=LassoTrainTestRatio(DataFirstWindow,DataFirstWindow,labels,ax[0],'mako','30 sec')
-predMatrixAll=LassoTrainTestRatio(DataAll,DataEmptyRoom,labels,ax[1],'gist_gray','300 sec')
-predMatrixFirstWindow=LassoTrainTestRatio(DataFirstWindow,DataEmptyRoom,labels,ax[0],'gist_gray','30 sec')
 # predMatrixFirstWindow=LassoTrainTestRatio(DataEmptyRoom,labels,ax,'gist_gray','30 sec')
 plt.suptitle('Lasso performance under different Tests/Train ratios - Age')
+
+#%% Training Percentage per Recorging Time
+meanMatrix=LassoTestTrainRatiosPerWindow(restStateAll,emptyRoomCropped,FirstWindow,columns,Age)
+colors=linear_gradient('#2100ff', '#ff0000', len(meanMatrix))
+for i,mean in enumerate(meanMatrix):
+    if i == 0:
+        label='Empty room'
+    else:
+        label='Time = '+str(int(30*i))+" [s]"
+    plt.plot(testTrainRatio,mean,color=colors['hex'][i],linewidth=5,alpha=.5,label=label)
+plt.legend(fontsize=15)
+plt.title('Lasso performance under different Tests/Train ratios and Recording times - Age',fontsize=17)
+plt.xlabel('Train percentage',fontsize=15)
+plt.ylabel('Pearson Correlation',fontsize=15)
+plt.yticks(fontsize=15)
+plt.xticks(fontsize=15)
+
 #%% Dictionary For ggseg
 
 

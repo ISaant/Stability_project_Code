@@ -6,14 +6,14 @@ setwd('~/Documents/Doctorado CIC/Internship/Sylvain/Stability-project/Stability_
 
 cbbPalette= c("#4f89e0", "#f5ec6c",'#156605',"#76D7C4", '#4d3d87',   "#f5ec6c",'#D81B99')
 
-df=read.csv('./dka_data_EmptyRoom.csv', header = TRUE, stringsAsFactors = FALSE)
+df=read.csv('./dka_data_CorrJO-ER.csv', header = TRUE, stringsAsFactors = FALSE)
 colnames(df)[1]='region'
 
 df$hemi =''
 df$hemi[seq(2,68,2)] ='right'
 df$hemi[seq(1,67,2)] ='left'
 
-colnames(df)[2]='Empty Room corr'
+colnames(df)[2]='corr'
 colnames(df)[4]='YEO'
 df$YEO_con= as.numeric(plyr::mapvalues(df$YEO, unique(df$YEO), 1:7))
 
@@ -21,10 +21,10 @@ df$YEO_con= as.numeric(plyr::mapvalues(df$YEO, unique(df$YEO), 1:7))
 ggplot(df) +
   geom_brain(atlas = dk, 
              position = position_brain(hemi ~ side),
-             aes(fill = `Empty Room corr`)) + viridis::scale_fill_viridis(option='magma') + 
+             aes(fill = `corr`)) + viridis::scale_fill_viridis(option='magma') + 
   theme_void() 
 
-ggsave('~/Documents/Doctorado CIC/Internship/Sylvain/Stability-project/Stability_project_Code/example4Luc 4/Santiago_decoding_corr_Catell.pdf', device = "pdf")
+ggsave('~/Documents/Doctorado CIC/Internship/Sylvain/Stability-project/Stability_project_Code/example4Luc 4/CorrJO-ER.pdf', device = "pdf")
 
 
 # set colour palette

@@ -201,19 +201,36 @@ def fooof(Data, freqs, inBetween):
 
 #==============================================================================
 
+def myWhiten(DataOriginal,freqs,parameters):
+    Data=copy.copy(DataOriginal)
+    for roi in range(len(parameters)):
+        for sub in range(len(parameters[0])):
+            exp=parameters[roi][sub][0]
+            offset=parameters[roi][sub][1]
+            arythmic=offset-np.log10(freqs**exp)
+            Data[sub,:,roi]=10**(np.log10(Data[sub,:,roi])-arythmic)
+            
+    return Data
+
+#==============================================================================
+
 def psdPlot(freqs,Data):
     Sub,PSD,ROI=Data.shape
     # columnsInBetween= [i for i, x in enumerate((freqs>=inBetween[0]) & (freqs<inBetween[1]+.5)) if x]
     figure()
     for roi in tqdm(range(ROI)):
         mean=np.mean(Data[:,:,roi],axis=0)
-        plot(np.log(freqs),np.log(mean),alpha=.2)
+        # plot(np.log(freqs),np.log(mean),alpha=.2)
+        plot(freqs,mean,alpha=.2)
+
         if roi == 0:
             Mean=mean
             continue
         Mean+=mean
     Mean/=(roi+1)
-    plot(np.log(freqs),np.log(Mean),'k')
+    # plot(np.log(freqs),np.log(Mean),'k')
+    plot(freqs,Mean,'k')
+
     plt.title('Global PSD')
     plt.xlabel('log(Frequencies [Hz])')
     plt.ylabel('log(Power)')
@@ -221,7 +238,7 @@ def psdPlot(freqs,Data):
 
 # =============================================================================
 
-def psdAgeRangePlot(freqs,Data,Age,plusTitle,AgeStep=2.5):
+def psdAgeRangePlot(freqs,Data,Age,plusTitle,loglog,AgeStep=2.5):
 
     Sub,PSD,ROI=Data.shape
     fig = figure(figsize=(10,7))
@@ -241,33 +258,124 @@ def psdAgeRangePlot(freqs,Data,Age,plusTitle,AgeStep=2.5):
         mean=np.mean(np.mean(Data[AgeRange,:,:],axis=2),axis=0)
         # meanAge=np.round(np.mean(Age[s:s+SubGroup]))
         plt.subplot(grid[0, :])
-       
-        plot(np.log(freqs[:PSD]),np.log(mean),color=colors['hex'][i], label = str(s+AgeStep))
-        plt.subplot(grid[1, 3:10])
-        plot(np.log(freqs[freqRange1]),np.log(mean[freqRange1]),color=colors['hex'][i])
-        plt.subplot(grid[1, 10:])
-        plot(np.log(freqs[freqRange2]),np.log(mean[freqRange2]),color=colors['hex'][i])
-        plt.yticks([])
-        # plot(freqs[:PSD],mean,color=colors['hex'][i],alpha=.7, label = str(s+AgeStep))
-
+        if loglog:
+            plot(np.log(freqs[:PSD]),np.log(mean),color=colors['hex'][i], label = str(s+AgeStep))
+            plt.subplot(grid[1, 3:10])
+            plot(np.log(freqs[freqRange1]),np.log(mean[freqRange1]),color=colors['hex'][i])
+            plt.subplot(grid[1, 10:])
+            plot(np.log(freqs[freqRange2]),np.log(mean[freqRange2]),color=colors['hex'][i])
+            plt.yticks([])
+            # plot(freqs[:PSD],mean,color=colors['hex'][i],alpha=.7, label = str(s+AgeStep))
+        else:
+            plot(freqs[:PSD],mean,color=colors['hex'][i], label = str(s+AgeStep))
+            plt.subplot(grid[1, 3:10])
+            plot(freqs[freqRange1],mean[freqRange1],color=colors['hex'][i])
+            plt.subplot(grid[1, 10:])
+            plot(freqs[freqRange2],mean[freqRange2],color=colors['hex'][i])
+            plt.yticks([])
         if i == 0:
             Mean=mean
             continue
         Mean+=mean
     Mean/=(i+1)
     plt.subplot(grid[0, :])
-    plot(np.log(freqs[:PSD]),np.log(Mean),'k',label='mean')
-    # plt.title('freqs [0:150]')
-    plt.xlabel('log(Frequencies  [0:150] Hz)')
-    plt.ylabel('log(Power)')
-    plt.legend()
-    plt.subplot(grid[1, 3:10])
-    plot(np.log(freqs[freqRange1]),np.log(Mean[freqRange1]),'k',)
-    plt.xlabel('log(Frequencies [5:35]Hz)')
-    plt.ylabel('log(Power)')
-    plt.subplot(grid[1, 10:])
-    plot(np.log(freqs[freqRange2]),np.log(Mean[freqRange2]),'k',)
-    plt.xlabel('log(Freq [49:51]Hz)')
+    if loglog:
+        plot(np.log(freqs[:PSD]),np.log(Mean),'k',label='mean')
+        # plt.title('freqs [0:150]')
+        plt.xlabel('log(Frequencies  [0:150] Hz)')
+        plt.ylabel('log(Power)')
+        plt.legend()
+        plt.subplot(grid[1, 3:10])
+        plot(np.log(freqs[freqRange1]),np.log(Mean[freqRange1]),'k',)
+        plt.xlabel('log(Frequencies [5:35]Hz)')
+        plt.ylabel('log(Power)')
+        plt.subplot(grid[1, 10:])
+        plot(np.log(freqs[freqRange2]),np.log(Mean[freqRange2]),'k',)
+        plt.xlabel('log(Freq [49:51]Hz)')
+    else:
+        plot(freqs[:PSD],Mean,'k',label='mean')
+        # plt.title('freqs [0:150]')
+        plt.xlabel('Frequencies  [0:150] Hz')
+        plt.ylabel('Power')
+        plt.legend()
+        plt.subplot(grid[1, 3:10])
+        plot(freqs[freqRange1],Mean[freqRange1],'k',)
+        plt.xlabel('Frequencies [5:35]Hz')
+        plt.ylabel('Power')
+        plt.subplot(grid[1, 10:])
+        plot(freqs[freqRange2],Mean[freqRange2],'k',)
+        plt.xlabel('Freq [49:51]Hz')
+    # plot(freqs[:PSD],Mean,'k',label='mean')
+    # plt.subplot(grid[:, 3])
+    
+# =============================================================================
+def psdAgeRangePlot_JustOneROI(freqs,Data,Age,plusTitle,loglog,AgeStep=2.5):
+
+    Sub,PSD=Data.shape
+    fig = figure(figsize=(10,7))
+    plt.suptitle('PSD per Age Group '+plusTitle)
+    Data=Data[Age.argsort(),:]
+    AgeSorted=np.sort(Age)
+    AgeStep=2.5
+    SubGroup=np.arange(min(Age)+(AgeStep*2),max(Age)-AgeStep*2,AgeStep)
+    colors=linear_gradient('#ffd89b', '#19547b', np.floor(len(SubGroup)-1).astype(int)+1)
+    grid = plt.GridSpec(2, 12, wspace=0.4, hspace=0.3)
+    freqRange1=np.where((freqs>=5)*(freqs<=35))[0]
+    freqRange2=np.where((freqs>49)*(freqs<51))[0]
+    for i,s in enumerate(tqdm(SubGroup)):
+        # s=int(np.round(s))
+        # print(i)
+        AgeRange=np.where((AgeSorted>=s)*(AgeSorted<s+AgeStep))[0]
+        mean=np.mean(Data[AgeRange,:],axis=0)
+        # meanAge=np.round(np.mean(Age[s:s+SubGroup]))
+        plt.subplot(grid[0, :])
+        if loglog:
+            plot(np.log(freqs[:PSD]),np.log(mean),color=colors['hex'][i], label = str(s+AgeStep))
+            plt.subplot(grid[1, 3:10])
+            plot(np.log(freqs[freqRange1]),np.log(mean[freqRange1]),color=colors['hex'][i])
+            plt.subplot(grid[1, 10:])
+            plot(np.log(freqs[freqRange2]),np.log(mean[freqRange2]),color=colors['hex'][i])
+            plt.yticks([])
+            # plot(freqs[:PSD],mean,color=colors['hex'][i],alpha=.7, label = str(s+AgeStep))
+        else:
+            plot(freqs[:PSD],mean,color=colors['hex'][i], label = str(s+AgeStep))
+            plt.subplot(grid[1, 3:10])
+            plot(freqs[freqRange1],mean[freqRange1],color=colors['hex'][i])
+            plt.subplot(grid[1, 10:])
+            plot(freqs[freqRange2],mean[freqRange2],color=colors['hex'][i])
+            plt.yticks([])
+        if i == 0:
+            Mean=mean
+            continue
+        Mean+=mean
+    Mean/=(i+1)
+    plt.subplot(grid[0, :])
+    if loglog:
+        plot(np.log(freqs[:PSD]),np.log(Mean),'k',label='mean')
+        # plt.title('freqs [0:150]')
+        plt.xlabel('log(Frequencies  [0:150] Hz)')
+        plt.ylabel('log(Power)')
+        plt.legend()
+        plt.subplot(grid[1, 3:10])
+        plot(np.log(freqs[freqRange1]),np.log(Mean[freqRange1]),'k',)
+        plt.xlabel('log(Frequencies [5:35]Hz)')
+        plt.ylabel('log(Power)')
+        plt.subplot(grid[1, 10:])
+        plot(np.log(freqs[freqRange2]),np.log(Mean[freqRange2]),'k',)
+        plt.xlabel('log(Freq [49:51]Hz)')
+    else:
+        plot(freqs[:PSD],Mean,'k',label='mean')
+        # plt.title('freqs [0:150]')
+        plt.xlabel('Frequencies  [0:150] Hz')
+        plt.ylabel('Power')
+        plt.legend()
+        plt.subplot(grid[1, 3:10])
+        plot(freqs[freqRange1],Mean[freqRange1],'k',)
+        plt.xlabel('Frequencies [5:35]Hz')
+        plt.ylabel('Power')
+        plt.subplot(grid[1, 10:])
+        plot(freqs[freqRange2],Mean[freqRange2],'k',)
+        plt.xlabel('Freq [49:51]Hz')
     # plot(freqs[:PSD],Mean,'k',label='mean')
     # plt.subplot(grid[:, 3])
 

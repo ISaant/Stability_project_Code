@@ -64,10 +64,11 @@ def Split(Data,labels,testSize,seed=None):
 def Perceptron (Input0,classification):
     # print(classification)
     tf.keras.backend.clear_session()
-    NN0 = Dense(2048, activation='linear')(Input0)
-    NN0 = Dense(256, activation='sigmoid')(NN0)
+    NN0 = Dense(512, activation='sigmoid')(Input0)
+    NN0 = Dense(256, activation='relu')(NN0)
+    NN0 = Dense(64, activation='relu')(NN0)
     NN0 = Dense(16, activation='relu')(NN0)
-    output = Dense(1, activation='linear')(NN0)
+    output = Dense(1, activation='relu')(NN0)
     loss='mean_squared_error',
     metrics=['mape']
     if classification:
@@ -80,7 +81,7 @@ def Perceptron (Input0,classification):
     
     
     # print(model.summary())
-    model.compile(optimizer=Adam(learning_rate=.001),
+    model.compile(optimizer=Adam(learning_rate=.0001),
                   loss=loss,
                   metrics=metrics)
 
@@ -131,7 +132,7 @@ def trainModel(model,x_train,y_train,epochs,plot):
                         validation_split=0.2, 
                         batch_size=64,
                         epochs =epochs,
-                        verbose=1)
+                        verbose=0)
     
     if plot:
         
@@ -161,18 +162,20 @@ def evaluateClassModel(model,x_test,y_test):
 
 #%% Function to plot predictions
 
-def plotPredictionsReg(predictions,y_test):
-    plt.figure()
-    plt.scatter(predictions,y_test)
+def plotPredictionsReg(predictions,y_test,plot):
     pearson=scipy.stats.pearsonr(predictions,y_test)
-    # print(pearson)
-    lims=[0,100]
-    plt.plot(lims,lims)
-    plt.xlabel('predicted')
-    plt.ylabel('ture values')
-    plt.xlim(lims)
-    plt.ylim(lims)
-    plt.show()
+    if plot :
+        plt.figure()
+        plt.scatter(predictions,y_test)
+        
+        # print(pearson)
+        lims=[0,100]
+        plt.plot(lims,lims)
+        plt.xlabel('predicted')
+        plt.ylabel('ture values')
+        plt.xlim(lims)
+        plt.ylim(lims)
+        plt.show()
     return pearson[0]
 
 #%%

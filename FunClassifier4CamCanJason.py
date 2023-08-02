@@ -68,7 +68,7 @@ def Perceptron (Input0,classification):
     NN0 = Dense(256, activation='relu')(NN0)
     NN0 = Dense(64, activation='relu')(NN0)
     NN0 = Dense(16, activation='relu')(NN0)
-    output = Dense(1, activation='relu')(NN0)
+    output = Dense(1, activation='linear')(NN0)
     loss='mean_squared_error',
     metrics=['mape']
     if classification:
@@ -87,6 +87,34 @@ def Perceptron (Input0,classification):
 
     return model
 
+#%%
+def Perceptron_PCA (Input0,classification):
+    # print(classification)
+    tf.keras.backend.clear_session()
+    NN0 = Dense(512, activation='sigmoid')(Input0)
+    NN0 = Dense(256, activation='relu')(NN0)
+    NN0 = Dense(64, activation='relu')(NN0)
+    NN0 = Dense(16, activation='relu')(NN0)
+    # NN0 = Dense(1024, activation='relu')(NN0)
+    # NN0 = Dense(32, activation='relu')(NN0)
+    output = Dense(1, activation='linear')(NN0)
+    loss='mean_squared_error',
+    metrics=['mape']
+    if classification:
+        output = Dense(7, activation='softmax')(NN0)
+        loss='categorical_crossentropy',
+        metrics=[Precision(),Recall()]
+    model = Model(
+        inputs=Input0,
+        outputs=output)
+    
+    
+    # print(model.summary())
+    model.compile(optimizer=Adam(learning_rate=.0001),
+                  loss=loss,
+                  metrics=metrics)
+
+    return model
 #%% CNN1D
 def CCN1D (Input0):
     

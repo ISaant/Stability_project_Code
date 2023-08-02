@@ -6,6 +6,9 @@ Created on Wed May 10 12:03:35 2023
 @author: isaac
 """
 import os
+os.chdir('Documents/Doctorado_CIC/Internship/Sylvain/Stability-project/Stability_project_Code/')
+
+
 import pandas as pd
 import numpy as np
 import copy
@@ -24,6 +27,7 @@ from sklearn.linear_model import Lasso, LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from TAR import TestAlgorithmsRegression
 from RegressionsResultPlot import RegPlot
+
 #%% Hyperparameters
 
 #fooof 

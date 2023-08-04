@@ -65,13 +65,26 @@ def linear_gradient(start_hex, finish_hex, n):
 
   return color_dict(RGB_list)
 #==============================================================================
-def myReshape(array):
+def myReshape(array,num_subjects=606):
     [x,y]=array.shape
-    newarray=np.zeros((606,300,68))
+    newarray=np.zeros((num_subjects,300,68))
     for i,j in enumerate(np.arange(0,y,300)):
         newarray[:,:,i]=array[:,j:j+300]
         
     return newarray
+
+#==============================================================================
+
+def reformat_AD(Matrix):
+    ROIs,PSD=Matrix.shape
+    reformatedMatrix=np.zeros((int(ROIs/68),int(PSD*68)))
+    for subj in range(int(ROIs/68)):
+        subjPSD=[]
+        for roi in np.linspace(subj*68,subj*68+68,68,endpoint=False,dtype=int):
+            subjPSD.extend(Matrix[roi,:])
+        reformatedMatrix[subj]=np.array(subjPSD)
+    return reformatedMatrix
+
 
 #==============================================================================
 
@@ -285,22 +298,25 @@ def psdPlot(freqs,Data):
     Sub,PSD,ROI=Data.shape
     # columnsInBetween= [i for i, x in enumerate((freqs>=inBetween[0]) & (freqs<inBetween[1]+.5)) if x]
     figure()
-    for roi in tqdm(range(ROI)):
-        mean=np.mean(Data[:,:,roi],axis=0)
+    for sub in tqdm(range(Sub)):
+        mean=np.mean(Data[sub,:,:],axis=1)
         # plot(np.log(freqs),np.log(mean),alpha=.2)
-        plot(freqs,mean,alpha=.2)
+        plot(np.log(freqs),np.log(mean))
+        # plt.show()
+        # plt.pause(1)
 
-        if roi == 0:
+        if sub == 0:
             Mean=mean
             continue
         Mean+=mean
-    Mean/=(roi+1)
+    Mean/=(Sub+1)
     # plot(np.log(freqs),np.log(Mean),'k')
-    plot(freqs,Mean,'k')
+    plot(np.log(freqs),np.log(Mean),'k')
 
     plt.title('Global PSD')
     plt.xlabel('log(Frequencies [Hz])')
     plt.ylabel('log(Power)')
+    
     
 
 # =============================================================================

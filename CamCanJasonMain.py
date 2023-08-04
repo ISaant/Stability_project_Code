@@ -6,7 +6,8 @@ Created on Wed May 10 12:03:35 2023
 @author: isaac
 """
 import os
-os.chdir('Documents/Doctorado_CIC/Internship/Sylvain/Stability-project/Stability_project_Code/')
+# os.chdir('Documents/Doctorado_CIC/Internship/Sylvain/Stability-project/Stability_project_Code/')
+os.chdir('/export03/data/Santiago/Stability_project_Code')
 
 
 import pandas as pd
@@ -47,6 +48,8 @@ current_path = os.getcwd()
 parentPath=os.path.abspath(os.path.join(current_path,os.pardir))
 path2Data=parentPath+'/Stability-project_db/CAMCAN_Jason_PrePro/'
 path2Anatomical=parentPath+'/Stability-project_db/Anatomical_Features/'
+path2PreventAD=parentPath+'/Stability-project_db/PreventAD_PSD/'
+PreventADFile=os.listdir(path2PreventAD)
 AnatFile=os.listdir(path2Anatomical)
 mainDir=np.sort(os.listdir(path2Data))
 emptyRoomDir=np.sort(os.listdir(path2Data+mainDir[0]+'/'))
@@ -92,6 +95,15 @@ restStateCropped = restState[:,columns,:] # Select the band-width of interest
 restStateCroppedNoOffset = restStateNoOffset[:,columns,:] # Select the band-width of interest
 restStateFooof=restState[:,columnsfooof,:]
 FirstWindow = np.squeeze(FirstWindow,axis=0)[:,columns,:]
+
+#%% Read and reformat PreventAD PSD File.
+pAD_PSD=pd.read_csv(path2PreventAD+PreventADFile[0],header=None).to_numpy()[:,:-1]
+pAD_PSD=reformat_AD(pAD_PSD)
+pAD_PSD=myReshape(pAD_PSD,num_subjects=pAD_PSD.shape[0])
+pAD_PSD=np.delete(pAD_PSD, [19,23,51,59,69],axis=0)
+psdPlot(freqs[4:80],pAD_PSD[:,4:80,:])
+psdPlot(freqs[4:80],restState[:,4:80,:])
+
 #%% NNMF instead of PCA
 nPca=100
 # pca_df,pro2use,prop_varianza_acum=myPCA (np.log(restStateOriginal),True, nPca)
@@ -110,7 +122,7 @@ psdAgeRangePlot_JustOneROI(freqs[columns[2:]],mywhiten[:,:,1],Age,'- Whiten',Tru
 
 
 #%% Plot global mean PSD per Subject
-psdAgeRangePlot(freqs,restState,Age,'',False)
+psdAgeRangePlot(freqs,restState,Age,'',True)
 psdAgeRangePlot(freqs,restStateNoOffset,Age,'w/o Offset',False)
 psdAgeRangePlot(freqs[columns[2:]],mywhiten,Age,' - Whiten',True)
 

@@ -85,6 +85,15 @@ def reformat_AD(Matrix):
         reformatedMatrix[subj]=np.array(subjPSD)
     return reformatedMatrix
 
+#==============================================================================
+
+def Relativize(Data):
+    Sub,PSD,ROI=Data.shape
+    RelData=copy.copy(Data)
+    for sub in range(Sub):
+        for roi in range(ROI):
+            RelData[sub,:,roi]/=sum(RelData[sub,:,roi])
+    return RelData
 
 #==============================================================================
 
@@ -301,7 +310,9 @@ def psdPlot(freqs,Data):
     for sub in tqdm(range(Sub)):
         mean=np.mean(Data[sub,:,:],axis=1)
         # plot(np.log(freqs),np.log(mean),alpha=.2)
-        plot(np.log(freqs),np.log(mean))
+        # plot(np.log(freqs),np.log(mean))
+        plot(freqs,mean,alpha=.2)
+
         # plt.show()
         # plt.pause(1)
 
@@ -309,9 +320,11 @@ def psdPlot(freqs,Data):
             Mean=mean
             continue
         Mean+=mean
-    Mean/=(Sub+1)
+    Mean/=(Sub)
     # plot(np.log(freqs),np.log(Mean),'k')
-    plot(np.log(freqs),np.log(Mean),'k')
+    # plot(np.log(freqs),np.log(Mean),'k')
+    plot(freqs,Mean,'k')
+# 
 
     plt.title('Global PSD')
     plt.xlabel('log(Frequencies [Hz])')

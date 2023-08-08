@@ -97,12 +97,24 @@ restStateFooof=restState[:,columnsfooof,:]
 FirstWindow = np.squeeze(FirstWindow,axis=0)[:,columns,:]
 
 #%% Read and reformat PreventAD PSD File.
+plt.close('all')
+#Read
+Age_pAD=pd.read_csv(path2PreventAD+PreventADFile[1],header=None).to_numpy()[:,1]
+AbTau_pAD=pd.read_csv(path2PreventAD+PreventADFile[2],header=None).to_numpy()[:,1:]
 pAD_PSD=pd.read_csv(path2PreventAD+PreventADFile[0],header=None).to_numpy()[:,:-1]
 pAD_PSD=reformat_AD(pAD_PSD)
 pAD_PSD=myReshape(pAD_PSD,num_subjects=pAD_PSD.shape[0])
-pAD_PSD=np.delete(pAD_PSD, [19,23,51,59,69],axis=0)
+
+#Remove
+Subjects2remove=[19, 22, 23, 51, 59, 69]
+pAD_PSD=np.delete(pAD_PSD, Subjects2remove,axis=0)
+Age_pAD=np.delete(Age_pAD,Subjects2remove)
+AbTau_pAD=np.delete(AbTau_pAD,Subjects2remove,axis=0)
 psdPlot(freqs[4:80],pAD_PSD[:,4:80,:])
 psdPlot(freqs[4:80],restState[:,4:80,:])
+psdPlot(freqs[4:80],Relativize(pAD_PSD)[:,4:80,:])
+psdPlot(freqs[4:80],Relativize(restState)[:,4:80,:])
+plt.show()
 
 #%% NNMF instead of PCA
 nPca=100
@@ -410,85 +422,91 @@ plt.ylabel('Pearson Correlation',fontsize=15)
 plt.yticks(fontsize=15)
 plt.xticks(fontsize=15)
 
+
+#%% Lasso Trained on CAMCAN and tested on Prevent AD
+
+LassoCAMCANvspAD(restStateCropped, pAD_PSD[:,columns,:],
+                 np.concatenate((Age,Age_pAD)),AbTau_pAD,Norm=None)
+
 #%% Dictionary For ggseg
 
 
-ROI={'bankssts_left':0,
-'bankssts_right':1,
-'caudalanteriorcingulate_left':0,
-'caudalanteriorcingulate_right':1,
-'caudalmiddlefrontal_left':0,
-'caudalmiddlefrontal_right':1,
-'cuneus_left':0,
-'cuneus_right':1,
-'entorhinal_left':0,
-'entorhinal_right':1,
-'frontalpole_left':0,
-'frontalpole_right':1,
-'fusiform_left':0,
-'fusiform_right':1,
-'inferiorparietal_left':0,
-'inferiorparietal_right':1,
-'inferiortemporal_left':0,
-'inferiortemporal_right':1,
-'insula_left':0,
-'insula_right':1,
-'isthmuscingulate_left':0,
-'isthmuscingulate_right':1,
-'lateraloccipital_left':0,
-'lateraloccipital_right':1,
-'lateralorbitofrontal_left':0,
-'lateralorbitofrontal_right':1,
-'lingual_left':0,
-'lingual_right':1,
-'medialorbitofrontal_left':0,
-'medialorbitofrontal_right':1,
-'middletemporal_left':0,
-'middletemporal_right':1,
-'paracentral_left':0,
-'paracentral_right':1,
-'parahippocampal_left':0,
-'parahippocampal_right':1,
-'parsopercularis_left':0,
-'parsopercularis_right':1,
-'parsorbitalis_left':0,
-'parsorbitalis_right':1,
-'parstriangularis_left':0,
-'parstriangularis_right':1,
-'pericalcarine_left':0,
-'pericalcarine_right':1,
-'postcentral_left':0,
-'postcentral_right':1,
-'posteriorcingulate_left':0,
-'posteriorcingulate_right':1,
-'precentral_left':0,
-'precentral_right':1,
-'precuneus_left':0,
-'precuneus_right':1,
-'rostralanteriorcingulate_left':0,
-'rostralanteriorcingulate_right':1,
-'rostralmiddlefrontal_left':0,
-'rostralmiddlefrontal_right':1,
-'superiorfrontal_left':0,
-'superiorfrontal_right':1,
-'superiorparietal_left':1,
-'superiorparietal_right':1,
-'superiortemporal_left':0,
-'superiortemporal_right':1,
-'supramarginal_left':0,
-'supramarginal_right':1,
-'temporalpole_left':0,
-'temporalpole_right':1,
-'transversetemporal_left':0,
-'transversetemporal_right':1
-}
+# ROI={'bankssts_left':0,
+# 'bankssts_right':1,
+# 'caudalanteriorcingulate_left':0,
+# 'caudalanteriorcingulate_right':1,
+# 'caudalmiddlefrontal_left':0,
+# 'caudalmiddlefrontal_right':1,
+# 'cuneus_left':0,
+# 'cuneus_right':1,
+# 'entorhinal_left':0,
+# 'entorhinal_right':1,
+# 'frontalpole_left':0,
+# 'frontalpole_right':1,
+# 'fusiform_left':0,
+# 'fusiform_right':1,
+# 'inferiorparietal_left':0,
+# 'inferiorparietal_right':1,
+# 'inferiortemporal_left':0,
+# 'inferiortemporal_right':1,
+# 'insula_left':0,
+# 'insula_right':1,
+# 'isthmuscingulate_left':0,
+# 'isthmuscingulate_right':1,
+# 'lateraloccipital_left':0,
+# 'lateraloccipital_right':1,
+# 'lateralorbitofrontal_left':0,
+# 'lateralorbitofrontal_right':1,
+# 'lingual_left':0,
+# 'lingual_right':1,
+# 'medialorbitofrontal_left':0,
+# 'medialorbitofrontal_right':1,
+# 'middletemporal_left':0,
+# 'middletemporal_right':1,
+# 'paracentral_left':0,
+# 'paracentral_right':1,
+# 'parahippocampal_left':0,
+# 'parahippocampal_right':1,
+# 'parsopercularis_left':0,
+# 'parsopercularis_right':1,
+# 'parsorbitalis_left':0,
+# 'parsorbitalis_right':1,
+# 'parstriangularis_left':0,
+# 'parstriangularis_right':1,
+# 'pericalcarine_left':0,
+# 'pericalcarine_right':1,
+# 'postcentral_left':0,
+# 'postcentral_right':1,
+# 'posteriorcingulate_left':0,
+# 'posteriorcingulate_right':1,
+# 'precentral_left':0,
+# 'precentral_right':1,
+# 'precuneus_left':0,
+# 'precuneus_right':1,
+# 'rostralanteriorcingulate_left':0,
+# 'rostralanteriorcingulate_right':1,
+# 'rostralmiddlefrontal_left':0,
+# 'rostralmiddlefrontal_right':1,
+# 'superiorfrontal_left':0,
+# 'superiorfrontal_right':1,
+# 'superiorparietal_left':1,
+# 'superiorparietal_right':1,
+# 'superiortemporal_left':0,
+# 'superiortemporal_right':1,
+# 'supramarginal_left':0,
+# 'supramarginal_right':1,
+# 'temporalpole_left':0,
+# 'temporalpole_right':1,
+# 'transversetemporal_left':0,
+# 'transversetemporal_right':1
+# }
 
-keysList = list(ROI.keys())
-for i,key in enumerate(ROI):
-    ROI[key]=MeanDiffJustOne2[i]
-import ggseg
-ggseg.plot_dk(ROI, background='k', edgecolor='w', cmap='jet', 
-              bordercolor='gray', ylabel='Age Predictibility (mm)', title='ROI Importance')
+# keysList = list(ROI.keys())
+# for i,key in enumerate(ROI):
+#     ROI[key]=MeanDiffJustOne2[i]
+# import ggseg
+# ggseg.plot_dk(ROI, background='k', edgecolor='w', cmap='jet', 
+#               bordercolor='gray', ylabel='Age Predictibility (mm)', title='ROI Importance')
 #%% Modify Dictionary based on Results
 
 #%% Print Figure of the brain
@@ -513,21 +531,21 @@ ggseg.plot_dk(ROI, background='k', edgecolor='w', cmap='jet',
 # plt.ylim((0,1))
 
 # myPCA statistics
-figure()
-Data=whitened #change this in order to test diferent psd (original, per, aper, whitened, etc )
-Sub,PSD,ROI=Data.shape
-nPca=25
-PCA=np.zeros((Sub,nPca+2,ROI))
-Var=[]
-Pro=[]
-for roi in  tqdm(range(ROI)):
-    df=pd.DataFrame(Data[:,:,roi])
-    pca_df,pro2use,prop_varianza_acum=myPCA(df,False,nPca)
-    Var.append(prop_varianza_acum)
-    PCA[:,:nPca,roi]=pro2use
-    for sub in range (Sub):  
-        PCA[sub,nPca,roi]=parameters[0][sub][0]
-        PCA[sub,nPca+1,roi]=parameters[0][sub][1]
-Var=pd.DataFrame(Var)
-sns.boxplot(Var)
-plt.ylim((0,1))
+# figure()
+# Data=whitened #change this in order to test diferent psd (original, per, aper, whitened, etc )
+# Sub,PSD,ROI=Data.shape
+# nPca=25
+# PCA=np.zeros((Sub,nPca+2,ROI))
+# Var=[]
+# Pro=[]
+# for roi in  tqdm(range(ROI)):
+#     df=pd.DataFrame(Data[:,:,roi])
+#     pca_df,pro2use,prop_varianza_acum=myPCA(df,False,nPca)
+#     Var.append(prop_varianza_acum)
+#     PCA[:,:nPca,roi]=pro2use
+#     for sub in range (Sub):  
+#         PCA[sub,nPca,roi]=parameters[0][sub][0]
+#         PCA[sub,nPca+1,roi]=parameters[0][sub][1]
+# Var=pd.DataFrame(Var)
+# sns.boxplot(Var)
+# plt.ylim((0,1))

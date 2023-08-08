@@ -11,8 +11,9 @@ Created on Sun Jul 23 10:41:11 2023
 Sub,PSD,ROI=restStateCropped.shape
 nPCA=10
 restStatePCA=np.zeros((Sub,nPCA,ROI))
+RrestStateCropped= Relativize(restStateCropped)
 for roi in range(ROI):
-    pca_df, pca2use, prop_varianza_acum= myPCA(np.log(restStateCropped[:,:,roi]),False,nPCA)
+    pca_df, pca2use, prop_varianza_acum= myPCA(np.log(RrestStateCropped[:,:,roi]),False,nPCA)
     plt.plot(prop_varianza_acum[:10])
     restStatePCA[:,:,roi]=np.array(pca2use)
     
@@ -55,7 +56,7 @@ def TestAlgorithmsRegression_psdPCA(restStatePCA,Age,Catell):
     
         # Perceptron Regression
             Input0=tf.keras.Input(shape=(x_train.shape[1],), )
-            modelNN=Perceptron (Input0,False)
+            modelNN=Perceptron_PCA (Input0,False)
             trainModel(modelNN,x_train,y_train,100,True)
             # predNN=evaluateRegModel(model,x_test,y_test)
             predNN = modelNN.predict(x_test).flatten()
@@ -93,5 +94,5 @@ DfpsdPCAReg=pd.DataFrame({'Corr':np.concatenate((AAgeReg,CCatellReg)),
                         'Algorithm':np.array(['Lasso','NN','RF']*int((len(AAgeReg)/3)+len(CCatellReg)/3)),
                         'Test':np.array(['Age']*len(AAgeReg)+['Catell']*len(CCatellReg))})        
 
-sns.set_context("poster", font_scale = 1, rc={"grid.linewidth": 5})
+sns.set_context("poster", font_scale = .8, rc={"grid.linewidth": 5})
 sns.boxplot(DfpsdPCAReg,x='Test',y='Corr',hue='Algorithm',palette='viridis').set_title('Predictibility per Algorithm')

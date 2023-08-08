@@ -11,6 +11,7 @@ import scipy
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import copy 
 from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
@@ -64,7 +65,7 @@ def Split(Data,labels,testSize,seed=None):
 def Perceptron (Input0,classification):
     # print(classification)
     tf.keras.backend.clear_session()
-    NN0 = Dense(512, activation='sigmoid')(Input0)
+    NN0 = Dense(512, activation='relu')(Input0)
     NN0 = Dense(256, activation='relu')(NN0)
     NN0 = Dense(64, activation='relu')(NN0)
     NN0 = Dense(16, activation='relu')(NN0)
@@ -193,16 +194,23 @@ def evaluateClassModel(model,x_test,y_test):
 def plotPredictionsReg(predictions,y_test,plot):
     pearson=scipy.stats.pearsonr(predictions,y_test)
     if plot :
-        plt.figure()
-        plt.scatter(predictions,y_test)
-        
+        # plt.figure()
+        plt.scatter(y_test,predictions)
+        # linReg = LinearRegression()
+        # linReg.fit(y_test.reshape(-1,1), predictions)
+        # Predict data of estimated models
+        # line_X = np.linspace(y_test.min(), y_test.max(),len(y_test))[:, np.newaxis]
+        # line_y = linReg.predict(line_X)
+        # plt.plot(line_X,line_y,color="yellowgreen", linewidth=4, alpha=.7)
+        # plt.annotate('PearsonR= '+str(round(pearson[0],2)),
+        #              (10,10),fontsize=12)
         # print(pearson)
         lims=[0,100]
         plt.plot(lims,lims)
-        plt.xlabel('predicted')
-        plt.ylabel('ture values')
-        plt.xlim(lims)
-        plt.ylim(lims)
+        plt.ylabel('predicted')
+        plt.xlabel('ture values')
+        # plt.xlim(lims)
+        # plt.ylim(lims)
         plt.show()
     return pearson[0]
 
@@ -381,3 +389,72 @@ def LassoTestTrainRatiosPerWindow(DataAll,DataEmpty,DataFirstWindow,columns,Age)
     
     return meanMatrix
 
+#%%
+
+def LassoCAMCANvspAD(restState_Data, pAD_PSD_Data, Age, AbTau, Norm=None):
+    RrestState= Relativize(restState_Data)
+    RpAD_PSD= Relativize(pAD_PSD_Data)
+    def NormalizeBetween(CamCan_Data, pAD_Data):
+        Sub,PSD=CamCan_Data.shape
+        Mean=[]
+        Std=[]
+        for psd in range(PSD):
+            mean=np.mean(CamCan_Data[:,psd])
+            std=np.std(CamCan_Data[:,psd])
+            Mean.append(mean)
+            Std.append(std)
+            CamCan_Data[:,psd]=(CamCan_Data[:,psd]-mean)/std
+            pAD_Data[:,psd]=(pAD_Data[:,psd]-mean)/std
+
+            
+        return CamCan_Data, pAD_Data
+    
+
+    Data=RestoreShape(np.concatenate((RrestState,RpAD_PSD),axis=0))   
+    Data=Scale(Data)
+    if Norm=='Between':
+        CamCan_Data, pAD_Data=NormalizeBetween(RestoreShape(RrestState), 
+                                        RestoreShape(RpAD_PSD))
+        
+        Data=np.concatenate((CamCan_Data,pAD_Data),axis=0)
+    
+    elif Norm=='Residuals':
+        xAxis=np.concatenate((np.zeros(len(restState_Data)),np.ones(len(pAD_PSD_Data)))).reshape(-1, 1)
+        Data=RestoreShape(np.concatenate((restState_Data,pAD_PSD_Data),axis=0))
+        linReg = LinearRegression()
+        for i in range(Data.shape[1]):
+            linReg.fit(xAxis,Data[:,i])
+            prediction = linReg.predict(xAxis)
+            residual = (Data[:,i]-prediction )
+            Data[:,i]=residual
+        Data=Scale(Data)
+            
+    Data,labels=RemoveNan(Data, Age)
+    DataScaled=Data  
+    CamCan_PSD=DataScaled[:restState_Data.shape[0],:]
+    pAD=DataScaled[restState_Data.shape[0]:,:]
+    CamCan_Age=labels[:restState_Data.shape[0]]
+    pAD_Age=labels[restState_Data.shape[0]:]
+    x_train,x_test, y_train,y_test,_,_=Split(CamCan_PSD,CamCan_Age,.17)
+    model = Lasso(alpha=.3,max_iter=3000)
+    model.fit(x_train, y_train)
+    pred_CamCan=model.predict(x_test)
+    pred_pAD=model.predict(pAD)
+    lassoPred_CamCan=plotPredictionsReg(pred_CamCan,y_test,True)
+    lassoPred_pAD=plotPredictionsReg(pred_pAD,pAD_Age,True)
+    plt.title('Lasso')
+    print(pAD_Age.shape,pred_pAD.shape,AbTau[:,0].shape,AbTau[:,1].shape,AbTau[:,2].shape)
+    df=pd.DataFrame({'TrueAge_pAD':pAD_Age,
+                     'pred_pAD': pred_pAD,
+                     'Col1':AbTau[:,0],
+                     'Col2':AbTau[:,1],
+                     'Col3':np.array([v for v in AbTau[:,2]], dtype=np.float32)})
+    
+    fig, axs = plt.subplots(1,3)
+    sns.scatterplot(df,x='TrueAge_pAD',y='pred_pAD',hue='Col1',ax=axs[0],palette='cividis',s=40)
+    axs[0].plot([min(pAD_Age),max(pAD_Age)],[min(pAD_Age),max(pAD_Age)],'k--',linewidth=2)
+    sns.scatterplot(df,x='TrueAge_pAD',y='pred_pAD',hue='Col2',ax=axs[1],palette='viridis',s=40)
+    axs[1].plot([min(pAD_Age),max(pAD_Age)],[min(pAD_Age),max(pAD_Age)],'k--',linewidth=2)
+    sns.scatterplot(df,x='TrueAge_pAD',y='pred_pAD',hue='Col3',ax=axs[2],palette='magma',s=40)
+    axs[2].plot([min(pAD_Age),max(pAD_Age)],[min(pAD_Age),max(pAD_Age)],'k--',linewidth=2)
+    # return pred_Lasso, lassoPred

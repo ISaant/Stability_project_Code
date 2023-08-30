@@ -36,7 +36,7 @@ inBetween=[1,40]
 
 #PSD
 freqs=np.arange(0,150,.5)
-alfaBetaFreqs=[0,60]
+alfaBetaFreqs=[0,50]
 columns= [i for i, x in enumerate((freqs>=alfaBetaFreqs[0]) & (freqs<alfaBetaFreqs[1])) if x]
 columnsfooof= [i for i, x in enumerate((freqs>=inBetween[0]) & (freqs<inBetween[1])) if x]
 freqsCropped=freqs[columns]
@@ -101,6 +101,7 @@ plt.close('all')
 #Read
 Age_pAD=pd.read_csv(path2PreventAD+PreventADFile[1],header=None).to_numpy()[:,1]
 AbTau_pAD=pd.read_csv(path2PreventAD+PreventADFile[2],header=None).to_numpy()[:,1:]
+cogCrossSec=pd.read_csv(path2PreventAD+PreventADFile[3],header=None).to_numpy()[:,1:]
 pAD_PSD=pd.read_csv(path2PreventAD+PreventADFile[0],header=None).to_numpy()[:,:-1]
 pAD_PSD=reformat_AD(pAD_PSD)
 pAD_PSD=myReshape(pAD_PSD,num_subjects=pAD_PSD.shape[0])
@@ -110,6 +111,8 @@ Subjects2remove=[19, 22, 23, 51, 59, 69]
 pAD_PSD=np.delete(pAD_PSD, Subjects2remove,axis=0)
 Age_pAD=np.delete(Age_pAD,Subjects2remove)
 AbTau_pAD=np.delete(AbTau_pAD,Subjects2remove,axis=0)
+cogCrossSec=np.delete(cogCrossSec,Subjects2remove,axis=0)
+
 psdPlot(freqs[4:80],pAD_PSD[:,4:80,:])
 psdPlot(freqs[4:80],restState[:,4:80,:])
 psdPlot(freqs[4:80],Relativize(pAD_PSD)[:,4:80,:])
@@ -426,7 +429,7 @@ plt.xticks(fontsize=15)
 #%% Lasso Trained on CAMCAN and tested on Prevent AD
 
 LassoCAMCANvspAD(restStateCropped, pAD_PSD[:,columns,:],
-                 np.concatenate((Age,Age_pAD)),AbTau_pAD,Norm=None)
+                 np.concatenate((Age,Age_pAD)),AbTau_pAD,cogCrossSec,Norm=None)
 
 #%% Dictionary For ggseg
 

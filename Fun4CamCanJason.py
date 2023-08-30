@@ -67,9 +67,9 @@ def linear_gradient(start_hex, finish_hex, n):
 #==============================================================================
 def myReshape(array,num_subjects=606):
     [x,y]=array.shape
-    newarray=np.zeros((num_subjects,300,68))
-    for i,j in enumerate(np.arange(0,y,300)):
-        newarray[:,:,i]=array[:,j:j+300]
+    newarray=np.zeros((num_subjects,int(y/68),68))
+    for i,j in enumerate(np.arange(0,y,int(y/68))):
+        newarray[:,:,i]=array[:,j:j+int(y/68)]
         
     return newarray
 

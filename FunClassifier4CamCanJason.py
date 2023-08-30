@@ -391,9 +391,9 @@ def LassoTestTrainRatiosPerWindow(DataAll,DataEmpty,DataFirstWindow,columns,Age)
 
 #%%
 
-def LassoCAMCANvspAD(restState_Data, pAD_PSD_Data, Age, AbTau, Norm=None):
-    RrestState= Relativize(restState_Data)
-    RpAD_PSD= Relativize(pAD_PSD_Data)
+def LassoCAMCANvspAD(restState_Data, pAD_PSD_Data, Age, AbTau, cogCross,Norm=None):
+    RrestState= np.log(Relativize(restState_Data))
+    RpAD_PSD= np.log(Relativize(pAD_PSD_Data))
     def NormalizeBetween(CamCan_Data, pAD_Data):
         Sub,PSD=CamCan_Data.shape
         Mean=[]
@@ -420,13 +420,13 @@ def LassoCAMCANvspAD(restState_Data, pAD_PSD_Data, Age, AbTau, Norm=None):
     
     elif Norm=='Residuals':
         xAxis=np.concatenate((np.zeros(len(restState_Data)),np.ones(len(pAD_PSD_Data)))).reshape(-1, 1)
-        Data=RestoreShape(np.concatenate((restState_Data,pAD_PSD_Data),axis=0))
-        linReg = LinearRegression()
+        Data=RestoreShape(np.concatenate((RrestState,RpAD_PSD),axis=0))
         for i in range(Data.shape[1]):
+            linReg = LinearRegression()
             linReg.fit(xAxis,Data[:,i])
             prediction = linReg.predict(xAxis)
-            residual = (Data[:,i]-prediction )
-            Data[:,i]=residual
+            residual = Data[:,i]-prediction 
+            Data[:,i]=residual+np.mean(Data[:,i])
         Data=Scale(Data)
             
     Data,labels=RemoveNan(Data, Age)
@@ -435,26 +435,42 @@ def LassoCAMCANvspAD(restState_Data, pAD_PSD_Data, Age, AbTau, Norm=None):
     pAD=DataScaled[restState_Data.shape[0]:,:]
     CamCan_Age=labels[:restState_Data.shape[0]]
     pAD_Age=labels[restState_Data.shape[0]:]
-    x_train,x_test, y_train,y_test,_,_=Split(CamCan_PSD,CamCan_Age,.17)
-    model = Lasso(alpha=.3,max_iter=3000)
-    model.fit(x_train, y_train)
-    pred_CamCan=model.predict(x_test)
-    pred_pAD=model.predict(pAD)
-    lassoPred_CamCan=plotPredictionsReg(pred_CamCan,y_test,True)
-    lassoPred_pAD=plotPredictionsReg(pred_pAD,pAD_Age,True)
-    plt.title('Lasso')
-    print(pAD_Age.shape,pred_pAD.shape,AbTau[:,0].shape,AbTau[:,1].shape,AbTau[:,2].shape)
-    df=pd.DataFrame({'TrueAge_pAD':pAD_Age,
-                     'pred_pAD': pred_pAD,
-                     'Col1':AbTau[:,0],
-                     'Col2':AbTau[:,1],
-                     'Col3':np.array([v for v in AbTau[:,2]], dtype=np.float32)})
+    x_train,x_test, y_train,y_test,_,_=Split(CamCan_PSD,CamCan_Age,.17,10)
     
-    fig, axs = plt.subplots(1,3)
-    sns.scatterplot(df,x='TrueAge_pAD',y='pred_pAD',hue='Col1',ax=axs[0],palette='cividis',s=40)
-    axs[0].plot([min(pAD_Age),max(pAD_Age)],[min(pAD_Age),max(pAD_Age)],'k--',linewidth=2)
-    sns.scatterplot(df,x='TrueAge_pAD',y='pred_pAD',hue='Col2',ax=axs[1],palette='viridis',s=40)
-    axs[1].plot([min(pAD_Age),max(pAD_Age)],[min(pAD_Age),max(pAD_Age)],'k--',linewidth=2)
-    sns.scatterplot(df,x='TrueAge_pAD',y='pred_pAD',hue='Col3',ax=axs[2],palette='magma',s=40)
-    axs[2].plot([min(pAD_Age),max(pAD_Age)],[min(pAD_Age),max(pAD_Age)],'k--',linewidth=2)
-    # return pred_Lasso, lassoPred
+    modelLasso = Lasso(alpha=.3,max_iter=3000)
+    modelLasso.fit(x_train, y_train)
+    
+    Input0=tf.keras.Input(shape=(x_train.shape[1],), )
+    modelNN=Perceptron_PCA(Input0,False)
+    trainModel(modelNN,x_train,y_train,300,False)
+    def PredictAndPlot(model,x_test,pAD):
+        pred_CamCan=model.predict(x_test).flatten()
+        pred_pAD=model.predict(pAD).flatten()
+        plt.figure()
+        _=plotPredictionsReg(pred_CamCan,y_test,True)
+        _=plotPredictionsReg(pred_pAD,pAD_Age,True)
+        plt.title('Lasso')
+        # print(pAD_Age.shape,pred_pAD.shape,AbTau[:,0].shape,AbTau[:,1].shape,AbTau[:,2].shape)
+        df=pd.DataFrame({'TrueAge_pAD':pAD_Age,
+                         'pred_pAD': pred_pAD,
+                         'PSD_qGrade':AbTau[:,0],
+                         'Am_Tau':AbTau[:,1],
+                         'Long_Scores':np.array([v for v in AbTau[:,2]], dtype=np.float32),
+                         'Total Score':cogCross[:,0],
+                         'Immed_Mem':cogCross[:,1]})
+        
+        fig, axs = plt.subplots(1,5)
+        sns.scatterplot(df,x='TrueAge_pAD',y='pred_pAD',hue='PSD_qGrade',ax=axs[0],palette='cividis',s=40)
+        axs[0].plot([min(pAD_Age),max(pAD_Age)],[min(pAD_Age),max(pAD_Age)],'k--',linewidth=2)
+        sns.scatterplot(df,x='TrueAge_pAD',y='pred_pAD',hue='Am_Tau',ax=axs[1],palette='viridis',s=40)
+        axs[1].plot([min(pAD_Age),max(pAD_Age)],[min(pAD_Age),max(pAD_Age)],'k--',linewidth=2)
+        sns.scatterplot(df,x='TrueAge_pAD',y='pred_pAD',hue='Long_Scores',ax=axs[2],palette='magma',s=40)
+        axs[2].plot([min(pAD_Age),max(pAD_Age)],[min(pAD_Age),max(pAD_Age)],'k--',linewidth=2)
+        sns.scatterplot(df,x='TrueAge_pAD',y='pred_pAD',hue='Total Score',ax=axs[3],palette='cool',s=40)
+        axs[3].plot([min(pAD_Age),max(pAD_Age)],[min(pAD_Age),max(pAD_Age)],'k--',linewidth=2)
+        sns.scatterplot(df,x='TrueAge_pAD',y='pred_pAD',hue='Immed_Mem',ax=axs[4],palette='RdPu',s=40)
+        axs[4].plot([min(pAD_Age),max(pAD_Age)],[min(pAD_Age),max(pAD_Age)],'k--',linewidth=2)
+        
+        # return pred_Lasso, lassoPred
+    PredictAndPlot(modelLasso,x_test,pAD)
+    PredictAndPlot(modelNN,x_test,pAD)
